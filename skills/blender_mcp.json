@@ -1,0 +1,191 @@
+{
+  "name": "blender_mcp",
+  "description": "Interact with Blender 3D software through MCP protocol. Use this to create, modify, and query 3D scenes, objects, materials, and assets.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "tool_name": {
+        "type": "string",
+        "description": "Name of the Blender MCP tool to call",
+        "enum": [
+          "get_scene_info",
+          "get_object_info",
+          "get_viewport_screenshot",
+          "execute_blender_code",
+          "get_polyhaven_status",
+          "get_polyhaven_categories",
+          "search_polyhaven_assets",
+          "download_polyhaven_asset",
+          "set_texture",
+          "get_sketchfab_status",
+          "search_sketchfab_models",
+          "get_sketchfab_model_preview",
+          "download_sketchfab_model",
+          "get_hyper3d_status",
+          "generate_hyper3d_model_via_text",
+          "generate_hyper3d_model_via_images",
+          "poll_rodin_job_status",
+          "import_generated_asset",
+          "get_hunyuan3d_status",
+          "generate_hunyuan3d_model",
+          "poll_hunyuan_job_status",
+          "import_generated_asset_hunyuan"
+        ]
+      },
+      "params": {
+        "type": "object",
+        "description": "Parameters to pass to the tool"
+      }
+    },
+    "required": ["tool_name", "params"]
+  },
+  "tools": {
+    "get_scene_info": {
+      "description": "Get detailed information about the current Blender scene",
+      "params": {}
+    },
+    "get_object_info": {
+      "description": "Get detailed information about a specific object",
+      "params": {
+        "object_name": "Name of the object to get information about"
+      }
+    },
+    "get_viewport_screenshot": {
+      "description": "Capture a screenshot of the current Blender 3D viewport",
+      "params": {
+        "max_size": "Maximum size in pixels (default: 800)"
+      }
+    },
+    "execute_blender_code": {
+      "description": "Execute arbitrary Python code in Blender",
+      "params": {
+        "code": "The Python code to execute"
+      }
+    },
+    "get_polyhaven_categories": {
+      "description": "Get categories for Polyhaven assets",
+      "params": {
+        "asset_type": "Type: hdris, textures, models, or all"
+      }
+    },
+    "search_polyhaven_assets": {
+      "description": "Search Polyhaven for assets",
+      "params": {
+        "asset_type": "Type: hdris, textures, models, or all",
+        "categories": "Optional comma-separated categories"
+      }
+    },
+    "download_polyhaven_asset": {
+      "description": "Download and import a Polyhaven asset",
+      "params": {
+        "asset_id": "The ID of the asset",
+        "asset_type": "hdris, textures, or models",
+        "resolution": "Resolution like 1k, 2k, 4k",
+        "file_format": "Optional format (hdr, exr, gltf, etc.)"
+      }
+    },
+    "set_texture": {
+      "description": "Apply a Polyhaven texture to an object",
+      "params": {
+        "object_name": "Name of the object",
+        "texture_id": "ID of the texture (must be downloaded first)"
+      }
+    },
+    "get_sketchfab_status": {
+      "description": "Check Sketchfab integration status",
+      "params": {}
+    },
+    "search_sketchfab_models": {
+      "description": "Search Sketchfab for models",
+      "params": {
+        "query": "Search query",
+        "categories": "Optional comma-separated categories",
+        "count": "Max results (default: 20)",
+        "downloadable": "Only downloadable (default: true)"
+      }
+    },
+    "get_sketchfab_model_preview": {
+      "description": "Get preview thumbnail of a Sketchfab model",
+      "params": {
+        "uid": "Model UID from search"
+      }
+    },
+    "download_sketchfab_model": {
+      "description": "Download and import a Sketchfab model",
+      "params": {
+        "uid": "Model UID",
+        "target_size": "Target size in meters for largest dimension"
+      }
+    },
+    "get_hyper3d_status": {
+      "description": "Check Hyper3D Rodin integration status",
+      "params": {}
+    },
+    "generate_hyper3d_model_via_text": {
+      "description": "Generate 3D model using Hyper3D from text prompt",
+      "params": {
+        "text_prompt": "English description of desired model",
+        "bbox_condition": "Optional [length, width, height] ratio"
+      }
+    },
+    "generate_hyper3d_model_via_images": {
+      "description": "Generate 3D model using Hyper3D from images",
+      "params": {
+        "input_image_paths": "Absolute paths to images (list)",
+        "input_image_urls": "URLs to images (list)",
+        "bbox_condition": "Optional [L,W,H] ratio"
+      }
+    },
+    "poll_rodin_job_status": {
+      "description": "Check Hyper3D generation task status",
+      "params": {
+        "subscription_key": "For MAIN_SITE mode",
+        "request_id": "For FAL_AI mode"
+      }
+    },
+    "import_generated_asset": {
+      "description": "Import Hyper3D generated asset",
+      "params": {
+        "name": "Object name in scene",
+        "task_uuid": "For MAIN_SITE mode",
+        "request_id": "For FAL_AI mode"
+      }
+    },
+    "get_hunyuan3d_status": {
+      "description": "Check Hunyuan3D integration status",
+      "params": {}
+    },
+    "generate_hunyuan3d_model": {
+      "description": "Generate 3D model using Hunyuan3D",
+      "params": {
+        "text_prompt": "Description in English/Chinese",
+        "input_image_url": "Optional image URL"
+      }
+    },
+    "poll_hunyuan_job_status": {
+      "description": "Check Hunyuan3D job status",
+      "params": {
+        "job_id": "Job ID from generation"
+      }
+    },
+    "import_generated_asset_hunyuan": {
+      "description": "Import Hunyuan3D generated asset",
+      "params": {
+        "name": "Object name in scene",
+        "zip_file_url": "ZIP file URL from job status"
+      }
+    }
+  },
+  "notes": [
+    "Blender must be running with the addon enabled (port 9876)",
+    "Use get_polyhaven_status(), get_sketchfab_status(), get_hyper3d_status(), get_hunyuan3d_status() first to check integrations",
+    "Always check world_bounding_box after importing assets to ensure proper placement",
+    "Break complex operations into smaller steps",
+    "Use asset_creation_strategy() prompt for guidance on when to use each integration"
+  ],
+  "connection": {
+    "host": "localhost",
+    "port": 9876,
+    "env": ["BLENDER_HOST", "BLENDER_PORT"]
+  }
+}
