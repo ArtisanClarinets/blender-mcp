@@ -14,3 +14,32 @@ wheels/
 
 # Local config secrets
 src/blender_mcp/config.py
+
+# Export directories
+exports/
+out/
+public/3d/
+
+# Temporary files
+tmp/
+temp/
+
+# Log files
+*.log
+logs/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+venv/*

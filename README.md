@@ -29,6 +29,58 @@ Give feedback, get inspired, and build on top of the MCP: [Discord](https://disc
 - Run Blender MCP on a remote host
 - Telemetry for tools executed (completely anonymous)
 
+## Autonomous Workflow
+
+BlenderMCP supports autonomous agent workflows through a structured loop:
+
+```
+observe_scene → plan → act → observe_scene…```
+
+**Recommended Agent Loop:**
+1. **Observe**: Get current scene state with `observe_scene()`
+2. **Plan**: Analyze scene and determine next steps
+3. **Act**: Use atomic tools to make changes
+4. **Observe**: Verify changes with `observe_scene()` again
+
+**Key Principles:**
+- Never use `execute_blender_code` unless needed
+- Prefer atomic tools for predictable behavior
+- Use `request_id` + idempotency keys for reliability
+- Verify changes via scene hash + screenshot
+
+## Next.js 16 Export
+
+BlenderMCP can export scenes for Next.js 16 applications:
+
+**Output Convention:**
+```
+your-next-app/public/3d/<slug>/
+├── model.glb
+├── preview.png
+├── manifest.json
+└── components/
+    ├── Scene.tsx
+    ├── Model.tsx
+    └── Camera.tsx
+```
+
+**Sample Usage:**
+```python
+result = call_tool("export_scene_bundle", {
+    "slug": "dungeon-scene",
+    "nextjs_project_root": "/path/to/next-app",
+    "mode": "scene",
+    "generate_r3f": true
+})
+```
+
+**Features:**
+- Export GLB with Draco compression
+- Generate scene manifest with transforms, cameras, lights
+- Render preview thumbnails
+- Optional R3F component generation
+- Cache invalidation support
+
 ### Installating a new version (existing users)
 - For newcomers, you can go straight to Installation. For existing users, see the points below
 - Download the latest addon.py file and replace the older one, then add it to Blender
@@ -229,6 +281,10 @@ Hyper3D's free trial key allows you to generate a limited number of models per d
 - **Timeout errors**: Try simplifying your requests or breaking them into smaller steps
 - **Poly Haven integration**: Claude is sometimes erratic with its behaviour
 - **Have you tried turning it off and on again?**: If you're still having connection errors, try restarting both Claude and the Blender server
+- **Port conflicts**: Ensure Blender addon is on port 9876, MCP server on default port
+- **File permissions**: Check write permissions for export directories
+- **Blender addon running**: Verify addon is enabled in Blender preferences
+- **Telemetry disabled**: Check if telemetry is blocking some features
 
 
 ## Technical Details

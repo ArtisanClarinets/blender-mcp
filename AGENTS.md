@@ -245,3 +245,116 @@ result = call_tool("download_sketchfab_model", {"uid": "model123", "target_size"
 - `generate_hunyuan3d_model(text_prompt, input_image_url)` - Generate model
 - `poll_hunyuan_job_status(job_id)` - Check job status
 - `import_generated_asset_hunyuan(name, zip_file_url)` - Import result
+
+## Autonomous Agent Guidelines
+
+### Never use execute_blender_code unless needed
+- Prefer atomic tools for predictable behavior
+- Code execution should be last resort
+- Complex operations should be broken down
+
+### Prefer atomic tools
+- Use specific tools like `create_primitive`, `set_transform` instead of code
+- Atomic operations are easier to verify and debug
+- Tools provide structured responses for chaining
+
+### Use request_id + idempotency keys
+- Include `request_id` in all commands
+- Use idempotency keys for repeated operations
+- Enables reliable retries and prevents duplicates
+
+### Verify changes via scene hash + screenshot
+- Always observe before and after changes
+- Use `get_scene_hash()` to detect changes
+- Capture screenshots to verify visual results
+
+### Agent Loop Pattern
+```
+observe_scene → plan → act → observe_scene…```
+
+### Error Handling
+- Check tool status before execution
+- Handle network errors gracefully
+- Use retries with exponential backoff
+- Provide meaningful error messages to users
+
+### Performance Considerations
+- Batch similar operations when possible
+- Use scene hash to avoid unnecessary operations
+- Cache results for repeated queries
+- Consider network latency for remote connections
+
+### Security
+- Never expose sensitive credentials
+- Validate user inputs before execution
+- Use secure connections when available
+- Monitor for suspicious activity patterns
+
+## Next.js 16 Integration
+
+BlenderMCP supports exporting scenes for Next.js 16 applications:
+
+**Output Convention:**
+```
+your-next-app/public/3d/<slug>/
+├── model.glb
+├── preview.png
+├── manifest.json
+└── components/
+    ├── Scene.tsx
+    ├── Model.tsx
+    └── Camera.tsx
+```
+
+**Key Features:**
+- Export GLB with Draco compression
+- Generate scene manifest with transforms, cameras, lights
+- Render preview thumbnails
+- Optional R3F component generation
+- Cache invalidation support
+
+### Integration Steps
+1. Use `export_scene_bundle()` to export scene
+2. Import into Next.js project
+3. Use generated components in pages
+4. Verify rendering with `observe_scene()`
+
+## Debugging Tips
+
+### Connection Issues
+- Verify Blender addon is running
+- Check port 9876 availability
+- Test with simple commands first
+- Check firewall settings
+
+### Tool Failures
+- Verify required integrations are enabled
+- Check API keys and credentials
+- Test with minimal parameters
+- Review error messages in logs
+
+### Performance Issues
+- Monitor network latency
+- Check Blender memory usage
+- Optimize scene complexity
+- Use caching for repeated operations
+
+## Contributing
+
+When adding new features:
+1. Update tool definitions in `skills/blender_mcp.json`
+2. Add corresponding client functions
+3. Update documentation
+4. Test with autonomous agent patterns
+5. Verify Next.js export compatibility
+
+## Version Compatibility
+
+- Blender 3.0+ required
+- Python 3.10+ required
+- MCP 1.3.0+ required
+- Next.js 16+ for export features
+
+## License
+
+MIT License - see LICENSE file for details

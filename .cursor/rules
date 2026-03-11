@@ -1,0 +1,158 @@
+# Cursor Rules for Blender MCP
+
+## Agent Guidelines
+
+### 1. Prefer Atomic Tools Over Code Execution
+
+**Always use specific tools:**
+- `create_primitive` instead of `execute_blender_code` with bpy.ops
+- `set_transform` instead of manual matrix manipulation
+- `assign_material_pbr` instead of complex node setup code
+
+### 2. Follow the Observe-Act-Observe Pattern
+
+```python
+# 1. OBSERVE - Get current state
+result = call_tool("observe_scene", {"detail": "med"})
+scene = json.loads(result)["data"]
+
+# 2. ACT - Make changes
+call_tool("create_primitive", {"type": "cube", "name": "Box"})
+
+# 3. OBSERVE - Verify changes
+result = call_tool("observe_scene", {"detail": "med", "include_screenshot": True})
+new_scene = json.loads(result)["data"]
+```
+
+### 3. Use Request IDs for All Operations
+
+```python
+import uuid
+
+request_id = str(uuid.uuid4())
+result = call_tool("create_primitive", {
+    "type": "sphere"
+}, request_id=request_id)
+```
+
+### 4. Use Idempotency Keys for Create Operations
+
+```python
+# This ensures the operation happens only once
+call_tool("create_primitive", {
+    "type": "cube",
+    "name": "Floor"
+}, idempotency_key="create-floor-v1")
+```
+
+### 5. Verify with Scene Hash
+
+```python
+# Before
+before_hash = json.loads(call_tool("get_scene_hash", {}))["data"]["hash"]
+
+# Action
+call_tool("create_light", {"type": "SUN", "energy": 3})
+
+# After
+after_hash = json.loads(call_tool("get_scene_hash", {}))["data"]["hash"]
+
+if before_hash == after_hash:
+    print("Warning: No change detected")
+```
+
+### 6. Export Using export_scene_bundle
+
+For Next.js projects, always use the bundle export:
+
+```python
+result = call_tool("export_scene_bundle", {
+    "slug": "hero-section",
+    "nextjs_project_root": "./my-app",
+    "mode": "scene",
+    "generate_r3f": True
+})
+```
+
+## Tool Selection Guide
+
+### Creating Objects
+- `create_primitive` - Basic shapes (cube, sphere, etc.)
+- `create_empty` - Empty/null objects
+- `create_camera` - Cameras with look-at support
+- `create_light` - Lights (sun, point, spot, area)
+
+### Modifying Objects
+- `set_transform` - Position, rotation, scale
+- `select_objects` - Selection management
+- `delete_objects` - Removal
+- `duplicate_object` - Copying
+- `assign_material_pbr` - Material assignment
+
+### Scene Inspection
+- `observe_scene` - Comprehensive scene data
+- `get_scene_hash` - Change detection
+- `get_object_info` - Specific object details
+- `get_viewport_screenshot` - Visual verification
+
+### Assets
+- `search_polyhaven_assets` / `download_polyhaven_asset` - PolyHaven
+- `search_sketchfab_models` / `download_sketchfab_model` - Sketchfab
+- `create_job` / `get_job` / `import_job_result` - AI generation
+
+### Export
+- `export_glb` - Standard GLB export
+- `render_preview` - Image rendering
+- `export_scene_bundle` - Next.js integration
+
+## Common Mistakes to Avoid
+
+1. **Don't use execute_blender_code for simple operations**
+   - Bad: `execute_blender_code` with `bpy.ops.mesh.primitive_cube_add()`
+   - Good: `create_primitive` with `type="cube"`
+
+2. **Don't forget to verify changes**
+   - Always check scene hash or take screenshot
+
+3. **Don't ignore errors**
+   - Check `ok` field in responses
+   - Handle error cases explicitly
+
+4. **Don't forget request IDs**
+   - Include for tracking and debugging
+
+5. **Don't use wrong detail level**
+   - Use "low" for quick checks
+   - Use "med" for most operations
+   - Use "high" only when needed
+
+## Response Handling
+
+All responses follow this structure:
+
+```python
+{
+    "ok": True,  # or False
+    "data": {...},  # Present if ok=True
+    "error": {      # Present if ok=False
+        "code": "error_code",
+        "message": "Human readable message",
+        "details": {...}
+    },
+    "request_id": "uuid",
+    "meta": {...}
+}
+```
+
+Always check `ok` before accessing `data`:
+
+```python
+result = call_tool("get_object_info", {"object_name": "Cube"})
+data = json.loads(result)
+
+if data.get("ok"):
+    object_info = data["data"]
+else:
+    error = data.get("error", {})
+    print(f"Error: {error.get('message')}")
+```

@@ -8,10 +8,29 @@
         "type": "string",
         "description": "Name of the Blender MCP tool to call",
         "enum": [
+          "observe_scene",
+          "get_scene_hash",
           "get_scene_info",
           "get_object_info",
           "get_viewport_screenshot",
+          "get_selection",
+          "create_primitive",
+          "create_empty",
+          "create_camera",
+          "create_light",
+          "set_transform",
+          "select_objects",
+          "delete_objects",
+          "duplicate_object",
+          "assign_material_pbr",
+          "set_world_hdri",
           "execute_blender_code",
+          "export_glb",
+          "render_preview",
+          "export_scene_bundle",
+          "create_job",
+          "get_job",
+          "import_job_result",
           "get_polyhaven_status",
           "get_polyhaven_categories",
           "search_polyhaven_assets",
@@ -40,6 +59,18 @@
     "required": ["tool_name", "params"]
   },
   "tools": {
+    "observe_scene": {
+      "description": "Observe the current scene state with configurable detail level",
+      "params": {
+        "detail": "Level of detail (low, med, high)",
+        "include_screenshot": "Whether to capture a screenshot",
+        "max_screenshot_size": "Maximum screenshot dimension"
+      }
+    },
+    "get_scene_hash": {
+      "description": "Get a stable hash of the current scene state",
+      "params": {}
+    },
     "get_scene_info": {
       "description": "Get detailed information about the current Blender scene",
       "params": {}
@@ -47,7 +78,7 @@
     "get_object_info": {
       "description": "Get detailed information about a specific object",
       "params": {
-        "object_name": "Name of the object to get information about"
+        "object_name": "Name or ID of the object"
       }
     },
     "get_viewport_screenshot": {
@@ -56,39 +87,178 @@
         "max_size": "Maximum size in pixels (default: 800)"
       }
     },
-    "execute_blender_code": {
-      "description": "Execute arbitrary Python code in Blender",
+    "get_selection": {
+      "description": "Get information about currently selected objects",
+      "params": {}
+    },
+    "create_primitive": {
+      "description": "Create a primitive object (cube, sphere, cylinder, cone, torus, plane)",
       "params": {
-        "code": "The Python code to execute"
+        "type": "Primitive type",
+        "name": "Optional name",
+        "size": "Optional size",
+        "location": "Optional [x, y, z] location",
+        "rotation": "Optional [x, y, z] rotation in radians",
+        "scale": "Optional [x, y, z] scale"
       }
     },
-    "get_polyhaven_categories": {
-      "description": "Get categories for Polyhaven assets",
+    "create_empty": {
+      "description": "Create an empty object",
       "params": {
-        "asset_type": "Type: hdris, textures, models, or all"
+        "name": "Optional name",
+        "location": "Optional [x, y, z] location"
+      }
+    },
+    "create_camera": {
+      "description": "Create a camera",
+      "params": {
+        "name": "Optional name",
+        "lens": "Optional focal length in mm",
+        "location": "Optional [x, y, z] location",
+        "look_at": "Optional [x, y, z] point to look at"
+      }
+    },
+    "create_light": {
+      "description": "Create a light (point, sun, spot, area)",
+      "params": {
+        "type": "Light type",
+        "energy": "Light energy/strength",
+        "color": "Optional [r, g, b] color (0-1 range)",
+        "location": "Optional [x, y, z] location",
+        "rotation": "Optional [x, y, z] rotation"
+      }
+    },
+    "set_transform": {
+      "description": "Set object transform (location, rotation, scale)",
+      "params": {
+        "target_id": "Object name or ID",
+        "location": "Optional [x, y, z] location",
+        "rotation": "Optional [x, y, z] rotation",
+        "scale": "Optional [x, y, z] scale",
+        "apply": "Whether to apply the transform"
+      }
+    },
+    "select_objects": {
+      "description": "Select objects in the scene",
+      "params": {
+        "ids": "List of object names or IDs",
+        "mode": "Selection mode (set, add, remove)"
+      }
+    },
+    "delete_objects": {
+      "description": "Delete objects from the scene",
+      "params": {
+        "ids": "List of object names or IDs"
+      }
+    },
+    "duplicate_object": {
+      "description": "Duplicate an object",
+      "params": {
+        "id": "Object name or ID",
+        "linked": "Whether to create linked duplicates",
+        "count": "Number of duplicates"
+      }
+    },
+    "assign_material_pbr": {
+      "description": "Assign PBR material to an object",
+      "params": {
+        "target_id": "Object name or ID",
+        "material_spec": "Material specification with base_color, metallic, roughness, normal_map"
+      }
+    },
+    "set_world_hdri": {
+      "description": "Set world HDRI environment",
+      "params": {
+        "asset_id": "PolyHaven HDRI asset ID",
+        "resolution": "Resolution (1k, 2k, 4k, 8k)"
+      }
+    },
+    "execute_blender_code": {
+      "description": "Execute arbitrary Python code in Blender (use with caution)",
+      "params": {
+        "code": "Python code to execute"
+      }
+    },
+    "export_glb": {
+      "description": "Export scene or selection to GLB format",
+      "params": {
+        "target": "What to export (scene, selection, collection)",
+        "name": "Name for exported file",
+        "output_dir": "Output directory",
+        "draco": "Use Draco compression",
+        "texture_embed": "Embed textures",
+        "y_up": "Use Y-up coordinate system"
+      }
+    },
+    "render_preview": {
+      "description": "Render a preview image",
+      "params": {
+        "output_path": "Path to save image",
+        "camera": "Optional camera name",
+        "resolution": "[width, height] in pixels"
+      }
+    },
+    "export_scene_bundle": {
+      "description": "Export complete scene bundle for Next.js 16",
+      "params": {
+        "slug": "Unique identifier",
+        "nextjs_project_root": "Path to Next.js project",
+        "mode": "Export mode (scene, assets)",
+        "generate_r3f": "Generate R3F components"
+      }
+    },
+    "create_job": {
+      "description": "Create async AI generation job",
+      "params": {
+        "provider": "Provider (hyper3d, hunyuan3d)",
+        "payload": "Job-specific payload"
+      }
+    },
+    "get_job": {
+      "description": "Get job status",
+      "params": {
+        "job_id": "Job ID"
+      }
+    },
+    "import_job_result": {
+      "description": "Import completed job result",
+      "params": {
+        "job_id": "Job ID",
+        "name": "Object name",
+        "target_size": "Optional target size"
+      }
+    },
+    "get_polyhaven_status": {
+      "description": "Check PolyHaven integration status",
+      "params": {}
+    },
+    "get_polyhaven_categories": {
+      "description": "Get PolyHaven categories",
+      "params": {
+        "asset_type": "Type (hdris, textures, models, all)"
       }
     },
     "search_polyhaven_assets": {
-      "description": "Search Polyhaven for assets",
+      "description": "Search PolyHaven assets",
       "params": {
-        "asset_type": "Type: hdris, textures, models, or all",
+        "asset_type": "Type (hdris, textures, models, all)",
         "categories": "Optional comma-separated categories"
       }
     },
     "download_polyhaven_asset": {
-      "description": "Download and import a Polyhaven asset",
+      "description": "Download PolyHaven asset",
       "params": {
-        "asset_id": "The ID of the asset",
-        "asset_type": "hdris, textures, or models",
-        "resolution": "Resolution like 1k, 2k, 4k",
-        "file_format": "Optional format (hdr, exr, gltf, etc.)"
+        "asset_id": "Asset ID",
+        "asset_type": "Type (hdris, textures, models)",
+        "resolution": "Resolution (1k, 2k, 4k)",
+        "file_format": "Optional format"
       }
     },
     "set_texture": {
-      "description": "Apply a Polyhaven texture to an object",
+      "description": "Apply texture to object",
       "params": {
-        "object_name": "Name of the object",
-        "texture_id": "ID of the texture (must be downloaded first)"
+        "object_name": "Object name",
+        "texture_id": "Texture ID"
       }
     },
     "get_sketchfab_status": {
@@ -96,92 +266,114 @@
       "params": {}
     },
     "search_sketchfab_models": {
-      "description": "Search Sketchfab for models",
+      "description": "Search Sketchfab models",
       "params": {
         "query": "Search query",
-        "categories": "Optional comma-separated categories",
-        "count": "Max results (default: 20)",
-        "downloadable": "Only downloadable (default: true)"
+        "categories": "Optional categories",
+        "count": "Max results",
+        "downloadable": "Only downloadable"
       }
     },
     "get_sketchfab_model_preview": {
-      "description": "Get preview thumbnail of a Sketchfab model",
+      "description": "Get Sketchfab model preview",
       "params": {
-        "uid": "Model UID from search"
+        "uid": "Model UID"
       }
     },
     "download_sketchfab_model": {
-      "description": "Download and import a Sketchfab model",
+      "description": "Download Sketchfab model",
       "params": {
         "uid": "Model UID",
-        "target_size": "Target size in meters for largest dimension"
+        "target_size": "Optional target size"
       }
     },
     "get_hyper3d_status": {
-      "description": "Check Hyper3D Rodin integration status",
+      "description": "Check Hyper3D status",
       "params": {}
     },
     "generate_hyper3d_model_via_text": {
-      "description": "Generate 3D model using Hyper3D from text prompt",
+      "description": "Generate Hyper3D model from text",
       "params": {
-        "text_prompt": "English description of desired model",
-        "bbox_condition": "Optional [length, width, height] ratio"
-      }
-    },
-    "generate_hyper3d_model_via_images": {
-      "description": "Generate 3D model using Hyper3D from images",
-      "params": {
-        "input_image_paths": "Absolute paths to images (list)",
-        "input_image_urls": "URLs to images (list)",
+        "text_prompt": "Description",
         "bbox_condition": "Optional [L,W,H] ratio"
       }
     },
-    "poll_rodin_job_status": {
-      "description": "Check Hyper3D generation task status",
+    "generate_hyper3d_model_via_images": {
+      "description": "Generate Hyper3D model from images",
       "params": {
-        "subscription_key": "For MAIN_SITE mode",
-        "request_id": "For FAL_AI mode"
+        "input_image_paths": "Image paths",
+        "input_image_urls": "Image URLs",
+        "bbox_condition": "Optional ratio"
+      }
+    },
+    "poll_rodin_job_status": {
+      "description": "Check Hyper3D job status",
+      "params": {
+        "subscription_key": "For MAIN_SITE",
+        "request_id": "For FAL_AI"
       }
     },
     "import_generated_asset": {
-      "description": "Import Hyper3D generated asset",
+      "description": "Import Hyper3D asset",
       "params": {
-        "name": "Object name in scene",
-        "task_uuid": "For MAIN_SITE mode",
-        "request_id": "For FAL_AI mode"
+        "name": "Object name",
+        "task_uuid": "For MAIN_SITE",
+        "request_id": "For FAL_AI"
       }
     },
     "get_hunyuan3d_status": {
-      "description": "Check Hunyuan3D integration status",
+      "description": "Check Hunyuan3D status",
       "params": {}
     },
     "generate_hunyuan3d_model": {
-      "description": "Generate 3D model using Hunyuan3D",
+      "description": "Generate Hunyuan3D model",
       "params": {
-        "text_prompt": "Description in English/Chinese",
+        "text_prompt": "Description",
         "input_image_url": "Optional image URL"
       }
     },
     "poll_hunyuan_job_status": {
       "description": "Check Hunyuan3D job status",
       "params": {
-        "job_id": "Job ID from generation"
+        "job_id": "Job ID"
       }
     },
     "import_generated_asset_hunyuan": {
-      "description": "Import Hunyuan3D generated asset",
+      "description": "Import Hunyuan3D asset",
       "params": {
-        "name": "Object name in scene",
-        "zip_file_url": "ZIP file URL from job status"
+        "name": "Object name",
+        "zip_file_url": "ZIP URL"
       }
+    }
+  },
+  "tool_return_schema": {
+    "description": "All tools return JSON objects with consistent structure",
+    "success_response": {
+      "ok": true,
+      "data": "Tool-specific data",
+      "request_id": "Correlation ID",
+      "meta": "Optional metadata"
+    },
+    "error_response": {
+      "ok": false,
+      "error": {
+        "code": "Error code",
+        "message": "Error message",
+        "details": "Optional details"
+      },
+      "request_id": "Correlation ID"
     }
   },
   "notes": [
     "Blender must be running with the addon enabled (port 9876)",
     "Use get_polyhaven_status(), get_sketchfab_status(), get_hyper3d_status(), get_hunyuan3d_status() first to check integrations",
-    "Always check world_bounding_box after importing assets to ensure proper placement",
+    "Always check world_bounding_box after importing assets",
     "Break complex operations into smaller steps",
-    "Use asset_creation_strategy() prompt for guidance on when to use each integration"
+    "Use asset_creation_strategy() prompt for guidance",
+    "Never use execute_blender_code unless needed",
+    "Prefer atomic tools for predictable behavior",
+    "Use request_id + idempotency keys for reliability",
+    "Verify changes via scene hash + screenshot"
   ],
   "connection": {
     "host": "localhost",

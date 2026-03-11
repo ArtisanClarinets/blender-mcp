@@ -1,0 +1,49 @@
+{
+  "name": "@blender-mcp/nextjs-integration",
+  "version": "1.0.0",
+  "description": "Next.js 16 integration for Blender MCP exports",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "lint": "eslint src/**/*.ts",
+    "test": "jest"
+  },
+  "keywords": [
+    "blender",
+    "mcp",
+    "nextjs",
+    "react-three-fiber",
+    "3d",
+    "gltf"
+  ],
+  "author": "BlenderMCP",
+  "license": "MIT",
+  "peerDependencies": {
+    "next": ">=16.0.0",
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0",
+    "@react-three/fiber": ">=8.0.0",
+    "@react-three/drei": ">=9.0.0",
+    "three": ">=0.150.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.0.0",
+    "@types/three": "^0.150.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "zod": "^3.22.0"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ahujasid/blender-mcp.git",
+    "directory": "packages/nextjs-integration"
+  }
+}
