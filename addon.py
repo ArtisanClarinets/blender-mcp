@@ -2368,6 +2368,56 @@ def _dispatch_lighting_command(command_type, params):
     raise ValueError(f"Unknown lighting command type: {command_type}")
 
 
+def _dispatch_rigging_command(command_type, params):
+    """Dispatch rigging commands through modular handlers."""
+    try:
+        from blender_mcp_addon.handlers import rigging as rigging_handlers
+    except ImportError:
+        raise ImportError(
+            "Rigging handlers not available. Please ensure blender_mcp_addon is installed."
+        )
+
+    if command_type == "get_rigging_status":
+        return rigging_handlers.get_status()
+    elif command_type == "create_auto_rig":
+        return rigging_handlers.create_auto_rig(params)
+    elif command_type == "generate_skeleton":
+        return rigging_handlers.generate_skeleton(params)
+    elif command_type == "auto_weight_paint":
+        return rigging_handlers.auto_weight_paint(params)
+    elif command_type == "create_control_rig":
+        return rigging_handlers.create_control_rig(params)
+
+    raise ValueError(f"Unknown rigging command type: {command_type}")
+
+
+def _dispatch_animation_command(command_type, params):
+    """Dispatch animation commands through modular handlers."""
+    try:
+        from blender_mcp_addon.handlers import animation as animation_handlers
+    except ImportError:
+        raise ImportError(
+            "Animation handlers not available. Please ensure blender_mcp_addon is installed."
+        )
+
+    if command_type == "get_animation_status":
+        return animation_handlers.get_status()
+    elif command_type == "create_animation_layer":
+        return animation_handlers.create_animation_layer(params)
+    elif command_type == "set_keyframe":
+        return animation_handlers.set_keyframe(params)
+    elif command_type == "create_animation_curve":
+        return animation_handlers.create_animation_curve(params)
+    elif command_type == "import_motion_capture":
+        return animation_handlers.import_motion_capture(params)
+    elif command_type == "retarget_animation":
+        return animation_handlers.retarget_animation(params)
+    elif command_type == "create_facial_animation":
+        return animation_handlers.create_facial_animation(params)
+
+    raise ValueError(f"Unknown animation command type: {command_type}")
+
+
 def _camera_look_at_rotation(location, target):
     try:
         import mathutils
@@ -3968,6 +4018,24 @@ class BlenderMCPServer:
             "setup_render_settings",
         }:
             return _dispatch_composition_command(command_type, params)
+        elif command_type in {
+            "get_rigging_status",
+            "create_auto_rig",
+            "generate_skeleton",
+            "auto_weight_paint",
+            "create_control_rig",
+        }:
+            return _dispatch_rigging_command(command_type, params)
+        elif command_type in {
+            "get_animation_status",
+            "create_animation_layer",
+            "set_keyframe",
+            "create_animation_curve",
+            "import_motion_capture",
+            "retarget_animation",
+            "create_facial_animation",
+        }:
+            return _dispatch_animation_command(command_type, params)
         elif command_type == "set_world_hdri":
             return set_world_hdri(params)
         elif command_type == "execute_blender_code":

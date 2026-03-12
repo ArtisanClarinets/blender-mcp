@@ -167,8 +167,8 @@ async def list_lights(ctx: Context) -> str:
     return _send_lighting_command("list_lights", {})
 
 
-
 # Add these new functions to the existing lighting.py file
+
 
 @telemetry_tool("create_hdri_lighting_setup")
 @mcp.tool()
@@ -182,14 +182,14 @@ async def create_hdri_lighting_setup(
 ) -> str:
     """
     Create an HDRI-based lighting setup.
-    
+
     Parameters:
     - hdri_path: Path to HDRI file
     - hdri_name: PolyHaven HDRI name
     - rotation: HDRI rotation
     - strength: Lighting strength
     - saturation: Color saturation
-    
+
     Returns:
     - JSON string with HDRI lighting result
     """
@@ -198,17 +198,18 @@ async def create_hdri_lighting_setup(
         "strength": strength,
         "saturation": saturation,
     }
-    
+
     if hdri_path:
         params["hdri_path"] = hdri_path
     if hdri_name:
         params["hdri_name"] = hdri_name
-        
+
     return _send_lighting_command("create_hdri_lighting_setup", params)
 
-@telemetry_tool("create_volumetric_lighting")
+
+@telemetry_tool("create_volumetric_light_effect")
 @mcp.tool()
-async def create_volumetric_lighting(
+async def create_volumetric_light_effect(
     ctx: Context,
     light_name: str,
     volume_type: str = "god_rays",
@@ -217,15 +218,15 @@ async def create_volumetric_lighting(
     anisotropy: float = 0.0,
 ) -> str:
     """
-    Create volumetric lighting effects.
-    
+    Create volumetric lighting effects on a specific light.
+
     Parameters:
     - light_name: Name of the light to make volumetric
-    - volume_type: Type of volumetric effect
+    - volume_type: Type of volumetric effect (god_rays, fog, haze)
     - density: Volume density
     - scatter_amount: Scattering amount
     - anisotropy: Scattering anisotropy
-    
+
     Returns:
     - JSON string with volumetric lighting result
     """
@@ -236,8 +237,9 @@ async def create_volumetric_lighting(
         "scatter_amount": scatter_amount,
         "anisotropy": anisotropy,
     }
-    
-    return _send_lighting_command("create_volumetric_lighting", params)
+
+    return _send_lighting_command("create_volumetric_light_effect", params)
+
 
 @telemetry_tool("create_studio_light_rig")
 @mcp.tool()
@@ -251,14 +253,14 @@ async def create_studio_light_rig(
 ) -> str:
     """
     Create a professional studio lighting rig.
-    
+
     Parameters:
     - rig_type: Type of rig ("portrait", "product", "fashion")
     - key_light_intensity: Key light intensity
     - fill_light_intensity: Fill light intensity
     - rim_light_intensity: Rim light intensity
     - background_light_intensity: Background light intensity
-    
+
     Returns:
     - JSON string with studio rig creation result
     """
@@ -269,8 +271,9 @@ async def create_studio_light_rig(
         "rim_light_intensity": rim_light_intensity,
         "background_light_intensity": background_light_intensity,
     }
-    
+
     return _send_lighting_command("create_studio_light_rig", params)
+
 
 @telemetry_tool("setup_light_linking")
 @mcp.tool()
@@ -282,12 +285,12 @@ async def setup_light_linking(
 ) -> str:
     """
     Setup light linking for selective illumination.
-    
+
     Parameters:
     - light_objects: List of light names
     - target_objects: List of objects to affect
     - link_type: "include" or "exclude"
-    
+
     Returns:
     - JSON string with light linking result
     """
@@ -296,5 +299,5 @@ async def setup_light_linking(
         "target_objects": target_objects,
         "link_type": link_type,
     }
-    
+
     return _send_lighting_command("setup_light_linking", params)
