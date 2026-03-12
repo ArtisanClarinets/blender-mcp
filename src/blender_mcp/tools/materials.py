@@ -209,3 +209,156 @@ async def list_materials(ctx: Context) -> str:
 async def delete_material(ctx: Context, name: str) -> str:
     """Delete a material by name."""
     return _send_material_command("delete_material", {"name": name})
+
+
+@telemetry_tool("create_subsurface_material")
+@mcp.tool()
+async def create_subsurface_material(
+    ctx: Context,
+    name: str,
+    base_color: List[float],
+    subsurface_color: List[float],
+    subsurface_radius: List[float],
+    subsurface: float = 0.5,
+    roughness: float = 0.5,
+    subsurface_method: str = "random_walk",
+) -> str:
+    """
+    Create an advanced subsurface scattering material.
+    
+    Parameters:
+    - name: Material name
+    - base_color: Base color [r, g, b]
+    - subsurface_color: Subsurface color [r, g, b]
+    - subsurface_radius: Scattering radius [r, g, b]
+    - subsurface: Subsurface strength
+    - roughness: Surface roughness
+    - subsurface_method: Scattering method
+    
+    Returns:
+    - JSON string with material creation result
+    """
+    params = {
+        "name": name,
+        "base_color": base_color,
+        "subsurface_color": subsurface_color,
+        "subsurface_radius": subsurface_radius,
+        "subsurface": subsurface,
+        "roughness": roughness,
+        "subsurface_method": subsurface_method,
+    }
+    
+    return _send_material_command("create_subsurface_material", params)
+
+@telemetry_tool("create_volume_material")
+@mcp.tool()
+async def create_volume_material(
+    ctx: Context,
+    name: str,
+    density: float = 0.1,
+    anisotropy: float = 0.0,
+    absorption_color: Optional[List[float]] = None,
+    emission_color: Optional[List[float]] = None,
+    emission_strength: float = 0.0,
+) -> str:
+    """
+    Create a volume material for clouds, smoke, or fire.
+    
+    Parameters:
+    - name: Material name
+    - density: Volume density
+    - anisotropy: Scattering anisotropy
+    - absorption_color: Absorption color
+    - emission_color: Emission color
+    - emission_strength: Emission strength
+    
+    Returns:
+    - JSON string with volume material creation result
+    """
+    params = {
+        "name": name,
+        "density": density,
+        "anisotropy": anisotropy,
+        "emission_strength": emission_strength,
+    }
+    
+    if absorption_color:
+        params["absorption_color"] = absorption_color
+    if emission_color:
+        params["emission_color"] = emission_color
+        
+    return _send_material_command("create_volume_material", params)
+
+@telemetry_tool("create_layered_material")
+@mcp.tool()
+async def create_layered_material(
+    ctx: Context,
+    name: str,
+    base_material: str,
+    layers: List[Dict[str, Any]],
+    blend_modes: Optional[List[str]] = None,
+) -> str:
+    """
+    Create a multi-layered material system.
+    
+    Parameters:
+    - name: Material name
+    - base_material: Base material name
+    - layers: List of layer definitions
+    - blend_modes: Blend modes for each layer
+    
+    Returns:
+    - JSON string with layered material creation result
+    """
+    params = {
+        "name": name,
+        "base_material": base_material,
+        "layers": layers,
+    }
+    
+    if blend_modes:
+        params["blend_modes"] = blend_modes
+        
+    return _send_material_command("create_layered_material", params)
+
+@telemetry_tool("create_hair_material")
+@mcp.tool()
+async def create_hair_material(
+    ctx: Context,
+    name: str,
+    base_color: List[float],
+    roughness: float = 0.3,
+    radial_roughness: float = 0.1,
+    coat: float = 0.0,
+    ior: float = 1.55,
+    melanin: float = 0.5,
+    melanin_redness: float = 0.0,
+) -> str:
+    """
+    Create a realistic hair material.
+    
+    Parameters:
+    - name: Material name
+    - base_color: Hair color
+    - roughness: Longitudinal roughness
+    - radial_roughness: Radial roughness
+    - coat: Coat strength
+    - ior: Index of refraction
+    - melanin: Melanin concentration
+    - melanin_redness: Red melanin concentration
+    
+    Returns:
+    - JSON string with hair material creation result
+    """
+    params = {
+        "name": name,
+        "base_color": base_color,
+        "roughness": roughness,
+        "radial_roughness": radial_roughness,
+        "coat": coat,
+        "ior": ior,
+        "melanin": melanin,
+        "melanin_redness": melanin_redness,
+    }
+    
+    return _send_material_command("create_hair_material", params)

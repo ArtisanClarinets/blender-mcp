@@ -1,0 +1,60 @@
+# BlenderMCP Studio Configuration Template
+# Copy this file and customize for your studio workflow
+
+[render]
+# Rendering engine configuration
+engine = "CYCLES"
+samples = 128
+max_bounces = 8
+transparent_min_bounces = 8
+transparent_max_bounces = 32
+volume_max_bounces = 4
+caustics_reflective = true
+caustics_refractive = true
+use_denoising = true
+denoiser = "OPTIX"
+tile_size = 256
+memory_limit = 8192
+
+[animation]
+# Animation workflow configuration
+default_fps = 24
+default_frame_range = [1, 250]
+interpolation_default = "BEZIER"
+auto_keyframe = true
+motion_blur_samples = 8
+motion_blur_shutter = 0.5
+
+[materials]
+# Material system configuration
+default_resolution = "2k"
+procedural_cache_size = 100
+ai_generation_timeout = 300
+material_library_path = "/path/to/material/library"
+
+[production]
+# Production pipeline configuration
+shot_naming_convention = "{sequence}_{shot_number:03d}"
+version_padding = 3
+review_required = true
+auto_backup = true
+backup_interval = 300
+
+[ai]
+# AI and ML configuration
+enabled = true
+model_cache_dir = "/path/to/model/cache"
+gpu_acceleration = true
+batch_size = 4
+max_concurrent_jobs = 2
+
+# Project paths
+project_root = "/path/to/projects"
+asset_library_path = "/path/to/assets"
+render_output_path = "/path/to/renders"
+cache_path = "/path/to/cache"
+
+# External integrations
+ftrack_url = "https://your-studio.ftrackapp.com"
+shotgun_url = "https://your-studio.shotgunstudio.com"
+render_farm_url = "https://your-render-farm.com/api"

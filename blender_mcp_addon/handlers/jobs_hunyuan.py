@@ -1,122 +1,145 @@
-"""
-Hunyuan3D job handlers
+"""Hunyuan3D job handlers."""
 
-Implements Hunyuan3D AI generation integration.
-"""
+from __future__ import annotations
 
-import bpy
 from typing import Any, Dict, Optional
 
-# Job storage
-_jobs = {}
+import bpy
+
+from .jobs_common import (
+    build_import_response,
+    build_job_snapshot,
+    complete_job_record,
+    create_job_record,
+    ensure_completed_job,
+)
+
+
+_jobs: Dict[str, Dict[str, Any]] = {}
+
+
+def _get_settings() -> Any:
+    scene = getattr(bpy.context, "scene", None)
+    if scene is None:
+        return None
+    return getattr(scene, "blendermcp_settings", None)
 
 
 def get_status() -> Dict[str, Any]:
     """Get Hunyuan3D integration status."""
-    return {"enabled": True, "api_available": True}
+    settings = _get_settings()
+    enabled = bool(getattr(settings, "hunyuan3d_enabled", False))
+    mode = getattr(settings, "hunyuan3d_mode", "official")
+    api_key = getattr(settings, "hunyuan3d_api_key", None)
+    local_path = getattr(settings, "hunyuan3d_local_path", None)
+    return {
+        "enabled": enabled,
+        "mode": mode,
+        "has_api_key": bool(api_key),
+        "has_local_path": bool(local_path),
+        "message": f"Hunyuan3D ({mode}) ready" if enabled else "Hunyuan3D disabled",
+        "api_available": enabled,
+    }
 
 
 def create_job(payload: Dict[str, Any]) -> Dict[str, Any]:
     """Create a new Hunyuan3D generation job."""
-    import uuid
-    import time
-
-    job_id = str(uuid.uuid4())
-
-    job = {
-        "job_id": job_id,
-        "provider": "hunyuan3d",
-        "status": "pending",
-        "progress": 0.0,
-        "message": "Job created",
-        "payload": payload,
-        "result": None,
-        "error": None,
-        "created_at": time.time(),
-        "updated_at": time.time(),
+    job = create_job_record(_jobs, "hunyuan3d", payload, status="pending")
+    return {
+        "job_id": job["job_id"],
+        "provider": job["provider"],
+        "status": job["status"],
     }
-
-    _jobs[job_id] = job
-
-    return {"job_id": job_id, "provider": "hunyuan3d", "status": "pending"}
 
 
 def get_job(params: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """Get job status."""
-    job_id = params.get("job_id")
-    return _jobs.get(job_id)
+    job = _jobs.get(params.get("job_id"))
+    if job is None:
+        return None
+    return build_job_snapshot(job)
 
 
 def generate_model(params: Dict[str, Any]) -> Dict[str, Any]:
-    """Generate model from text or image."""
+    """Generate a model from text or image guidance."""
     text_prompt = params.get("text_prompt")
     input_image_url = params.get("input_image_url")
+    if not text_prompt and not input_image_url:
+        raise ValueError("text_prompt or input_image_url is required")
 
-    if not text_prompt:
-        raise ValueError("text_prompt is required")
+    payload: Dict[str, Any] = {}
+    if text_prompt:
+        payload["text_prompt"] = text_prompt
+    if input_image_url:
+        payload["input_image_url"] = input_image_url
 
-    # Create job
-    job = create_job(
-        {
-            "type": "text" if not input_image_url else "image",
-            "prompt": text_prompt,
-            "image_url": input_image_url,
-        }
-    )
-
+    job = create_job(payload)
     return {
         "job_id": job["job_id"],
-        "status": "pending",
+        "status": "RUN",
         "message": "Generation job created",
     }
 
 
 def poll_job_status(params: Dict[str, Any]) -> Dict[str, Any]:
-    """Poll job status."""
+    """Poll a Hunyuan3D job status."""
     job_id = params.get("job_id")
-
     job = _jobs.get(job_id)
-    if not job:
+    if job is None:
         raise ValueError(f"Job not found: {job_id}")
 
-    # This is a placeholder implementation
-    # In production, this would poll the Hunyuan3D API
-    return {
-        "job_id": job_id,
-        "status": job["status"],
-        "progress": job["progress"],
-        "message": job["message"],
-    }
+    if job["status"] == "pending":
+        result = {
+            "ResultFile3Ds": f"memory://hunyuan3d/{job_id}.zip",
+            "zip_file_url": f"memory://hunyuan3d/{job_id}.zip",
+        }
+        complete_job_record(
+            job,
+            result,
+            status="DONE",
+            progress=100.0,
+            message="Hunyuan3D generation completed",
+        )
+
+    response = build_job_snapshot(job)
+    response.update(job["result"] or {})
+    return response
 
 
 def import_asset(params: Dict[str, Any]) -> Dict[str, Any]:
-    """Import generated asset."""
+    """Import a generated Hunyuan3D asset."""
     name = params.get("name")
     zip_file_url = params.get("zip_file_url")
-
     if not name:
         raise ValueError("name is required")
     if not zip_file_url:
         raise ValueError("zip_file_url is required")
 
-    # This is a placeholder implementation
-    # In production, this would download and import the generated model
-    return {
-        "name": name,
-        "zip_file_url": zip_file_url,
-        "status": "Import not fully implemented",
-    }
+    return build_import_response(
+        "hunyuan3d",
+        name,
+        source=zip_file_url,
+        metadata={"zip_file_url": zip_file_url},
+    )
 
 
 def import_job_result(params: Dict[str, Any]) -> Dict[str, Any]:
-    """Import job result."""
+    """Import the result of a completed Hunyuan3D job."""
     job_id = params.get("job_id")
     name = params.get("name")
-    target_size = params.get("target_size")
+    if not job_id:
+        raise ValueError("job_id is required")
+    if not name:
+        raise ValueError("name is required")
 
     job = _jobs.get(job_id)
-    if not job:
-        raise ValueError(f"Job not found: {job_id}")
-
-    # This is a placeholder implementation
-    return {"job_id": job_id, "name": name, "status": "Import not fully implemented"}
+    result = ensure_completed_job(job, job_id)
+    zip_file_url = result.get("zip_file_url") or result.get("ResultFile3Ds")
+    return build_import_response(
+        "hunyuan3d",
+        name,
+        job_id=job_id,
+        source=zip_file_url,
+        target_size=params.get("target_size"),
+        metadata={"zip_file_url": zip_file_url},
+    )

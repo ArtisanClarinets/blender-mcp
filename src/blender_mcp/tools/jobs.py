@@ -23,10 +23,11 @@ async def create_job(ctx: Context, provider: str, payload: Dict[str, Any]) -> st
     Create a new async job for AI generation.
 
     Parameters:
-    - provider: Provider name ("hyper3d", "hunyuan3d")
+    - provider: Provider name ("hyper3d", "hunyuan3d", "tripo3d")
     - payload: Job-specific payload
       - For Hyper3D: {"text_prompt": "...", "bbox_condition": [...]}
       - For Hunyuan3D: {"text_prompt": "...", "input_image_url": "..."}
+      - For Tripo3D: {"text_prompt": "..."} or {"image_url": "..."}
 
     Returns:
     - JSON string with job_id, provider, and status
@@ -84,7 +85,7 @@ async def import_job_result(
         blender = get_blender_connection()
 
         params = {"job_id": job_id, "name": name}
-        if target_size:
+        if target_size is not None:
             params["target_size"] = target_size
 
         result = blender.send_command("import_job_result", params)
@@ -255,7 +256,9 @@ async def get_hunyuan3d_status(ctx: Context) -> str:
 @telemetry_tool("generate_hunyuan3d_model")
 @mcp.tool()
 async def generate_hunyuan3d_model(
-    ctx: Context, text_prompt: str, input_image_url: Optional[str] = None
+    ctx: Context,
+    text_prompt: Optional[str] = None,
+    input_image_url: Optional[str] = None,
 ) -> str:
     """
     Generate 3D model using Hunyuan3D.
@@ -268,8 +271,13 @@ async def generate_hunyuan3d_model(
     - JSON string with generation result
     """
     try:
+        if not text_prompt and not input_image_url:
+            raise ValueError("Either text_prompt or input_image_url must be provided")
+
         blender = get_blender_connection()
-        params = {"text_prompt": text_prompt}
+        params = {}
+        if text_prompt:
+            params["text_prompt"] = text_prompt
         if input_image_url:
             params["input_image_url"] = input_image_url
         result = blender.send_command("generate_hunyuan3d_model", params)

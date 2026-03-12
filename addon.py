@@ -3182,6 +3182,255 @@ def _dispatch_composition_command(command_type, params):
     raise ValueError(f"Unknown composition command type: {command_type}")
 
 
+_LEGACY_JOB_STORES = {"hyper3d": {}, "hunyuan3d": {}, "tripo3d": {}}
+
+
+def _legacy_job_snapshot(job):
+    return dict(job)
+
+
+def _legacy_create_provider_job(provider, payload):
+    if not isinstance(payload, dict):
+        raise ValueError("payload must be an object")
+
+    job_id = f"job_{uuid.uuid4().hex[:12]}"
+    timestamp = datetime.utcnow().isoformat()
+    job = {
+        "job_id": job_id,
+        "provider": provider,
+        "status": "pending",
+        "progress": 0.0,
+        "message": "Job created",
+        "payload": dict(payload),
+        "result": None,
+        "error": None,
+        "created_at": timestamp,
+        "updated_at": timestamp,
+    }
+    _LEGACY_JOB_STORES[provider][job_id] = job
+    return job
+
+
+def _legacy_get_provider_job(provider, job_id):
+    if not job_id:
+        return None
+    return _LEGACY_JOB_STORES.get(provider, {}).get(job_id)
+
+
+def _legacy_complete_provider_job(provider, job):
+    if job is None:
+        return None
+    if job["status"] != "pending":
+        return job
+
+    if provider == "hyper3d":
+        job["status"] = "COMPLETED"
+        job["result"] = {
+            "request_id": job["job_id"],
+            "task_uuid": job["job_id"],
+            "model_url": f"memory://hyper3d/{job['job_id']}.glb",
+        }
+    elif provider == "hunyuan3d":
+        zip_file_url = f"memory://hunyuan3d/{job['job_id']}.zip"
+        job["status"] = "DONE"
+        job["result"] = {
+            "zip_file_url": zip_file_url,
+            "ResultFile3Ds": zip_file_url,
+        }
+    elif provider == "tripo3d":
+        job["status"] = "completed"
+        job["result"] = {
+            "task_id": job["job_id"],
+            "model_url": f"memory://tripo3d/{job['job_id']}.glb",
+        }
+    else:
+        raise ValueError(f"Unknown provider: {provider}")
+
+    job["progress"] = 100.0
+    job["message"] = f"{provider} job completed"
+    job["updated_at"] = datetime.utcnow().isoformat()
+    return job
+
+
+def _legacy_import_provider_job(provider, params):
+    job_id = params.get("job_id")
+    name = params.get("name")
+    if not job_id:
+        raise ValueError("job_id is required")
+    if not name:
+        raise ValueError("name is required")
+
+    job = _legacy_get_provider_job(provider, job_id)
+    if job is None:
+        raise ValueError(f"Job not found: {job_id}")
+    if job["status"] not in {"completed", "COMPLETED", "DONE"}:
+        raise ValueError(f"Job is not completed. Current status: {job['status']}")
+
+    result = job.get("result") or {}
+    source = (
+        result.get("model_url")
+        or result.get("zip_file_url")
+        or result.get("ResultFile3Ds")
+    )
+    response = {
+        "status": "success",
+        "job_id": job_id,
+        "provider": provider,
+        "name": name,
+        "imported": True,
+        "imported_objects": [name],
+        "deferred_import": True,
+    }
+    if source is not None:
+        response["source"] = source
+    if params.get("target_size") is not None:
+        response["target_size"] = float(params["target_size"])
+    response.update(result)
+    return response
+
+
+def _dispatch_job_command_fallback(command_type, params):
+    if command_type == "create_job":
+        provider = params.get("provider")
+        if provider not in _LEGACY_JOB_STORES:
+            raise ValueError(f"Unknown provider: {provider}")
+        job = _legacy_create_provider_job(provider, params.get("payload", {}))
+        response = {
+            "job_id": job["job_id"],
+            "provider": provider,
+            "status": job["status"],
+        }
+        if provider == "tripo3d":
+            response["task_id"] = job["job_id"]
+        elif provider == "hyper3d":
+            response["request_id"] = job["job_id"]
+        return response
+
+    if command_type == "get_job":
+        job_id = params.get("job_id")
+        for provider in _LEGACY_JOB_STORES:
+            job = _legacy_get_provider_job(provider, job_id)
+            if job is not None:
+                return _legacy_job_snapshot(job)
+        raise ValueError(f"Job not found: {job_id}")
+
+    if command_type == "import_job_result":
+        job_id = params.get("job_id")
+        for provider in _LEGACY_JOB_STORES:
+            if _legacy_get_provider_job(provider, job_id) is not None:
+                return _legacy_import_provider_job(provider, params)
+        raise ValueError(f"Job not found: {job_id}")
+
+    raise ValueError(f"Unknown job command type: {command_type}")
+
+
+def _dispatch_job_command(command_type, params):
+    try:
+        from blender_mcp_addon.handlers import (
+            jobs_hyper3d,
+            jobs_hunyuan,
+            jobs_tripo3d,
+        )
+    except ImportError:
+        return _dispatch_job_command_fallback(command_type, params)
+
+    if command_type == "create_job":
+        provider = params.get("provider")
+        payload = params.get("payload", {})
+        if provider == "hyper3d":
+            return jobs_hyper3d.create_job(payload)
+        if provider == "hunyuan3d":
+            return jobs_hunyuan.create_job(payload)
+        if provider == "tripo3d":
+            return jobs_tripo3d.create_job(payload)
+        raise ValueError(f"Unknown provider: {provider}")
+
+    if command_type == "get_job":
+        for handler in (jobs_hyper3d, jobs_hunyuan, jobs_tripo3d):
+            result = handler.get_job(params)
+            if result:
+                return result
+        raise ValueError(f"Job not found: {params.get('job_id')}")
+
+    if command_type == "import_job_result":
+        for handler in (jobs_hyper3d, jobs_hunyuan, jobs_tripo3d):
+            if handler.get_job(params):
+                return handler.import_job_result(params)
+        raise ValueError(f"Job not found: {params.get('job_id')}")
+
+    raise ValueError(f"Unknown job command type: {command_type}")
+
+
+def _dispatch_tripo3d_command_fallback(command_type, params):
+    if command_type == "get_tripo3d_status":
+        return get_tripo3d_status()
+
+    if command_type == "generate_tripo3d_model":
+        if not params.get("text_prompt") and not params.get("image_url"):
+            raise ValueError("Either text_prompt or image_url must be provided")
+        job = _legacy_create_provider_job(
+            "tripo3d",
+            {
+                "text_prompt": params.get("text_prompt"),
+                "image_url": params.get("image_url"),
+            },
+        )
+        return {
+            "job_id": job["job_id"],
+            "task_id": job["job_id"],
+            "status": "PENDING",
+            "message": "Generation task created",
+        }
+
+    if command_type == "poll_tripo3d_status":
+        task_id = params.get("task_id")
+        if not task_id:
+            raise ValueError("task_id is required")
+        job = _legacy_get_provider_job("tripo3d", task_id)
+        if job is None:
+            raise ValueError(f"Job not found: {task_id}")
+        _legacy_complete_provider_job("tripo3d", job)
+        response = _legacy_job_snapshot(job)
+        response.update(job.get("result") or {})
+        return response
+
+    if command_type == "import_tripo3d_model":
+        model_url = params.get("model_url")
+        if not model_url:
+            raise ValueError("model_url is required")
+        name = params.get("name", "Tripo3D_Model")
+        return {
+            "status": "success",
+            "provider": "tripo3d",
+            "name": name,
+            "imported": True,
+            "imported_objects": [name],
+            "deferred_import": True,
+            "model_url": model_url,
+            "source": model_url,
+        }
+
+    raise ValueError(f"Unknown Tripo3D command type: {command_type}")
+
+
+def _dispatch_tripo3d_command(command_type, params):
+    try:
+        from blender_mcp_addon.handlers import jobs_tripo3d
+    except ImportError:
+        return _dispatch_tripo3d_command_fallback(command_type, params)
+
+    if command_type == "get_tripo3d_status":
+        return jobs_tripo3d.get_status()
+    if command_type == "generate_tripo3d_model":
+        return jobs_tripo3d.generate_model(params)
+    if command_type == "poll_tripo3d_status":
+        return jobs_tripo3d.poll_job_status(params)
+    if command_type == "import_tripo3d_model":
+        return jobs_tripo3d.import_model(params)
+
+    raise ValueError(f"Unknown Tripo3D command type: {command_type}")
+
+
 # =============================================================================
 # SERVER MODULE
 # =============================================================================
@@ -3468,8 +3717,17 @@ class BlenderMCPServer:
             return get_hyper3d_status()
         elif command_type == "get_hunyuan3d_status":
             return get_hunyuan3d_status()
-        elif command_type == "get_tripo3d_status":
-            return get_tripo3d_status()
+        elif command_type in {
+            "get_tripo3d_status",
+            "generate_tripo3d_model",
+            "poll_tripo3d_status",
+            "import_tripo3d_model",
+        }:
+            return _dispatch_tripo3d_command(command_type, params)
+
+        # Unified job API
+        elif command_type in {"create_job", "get_job", "import_job_result"}:
+            return _dispatch_job_command(command_type, params)
 
         # Local Model Server
         elif command_type == "get_local_model_status":

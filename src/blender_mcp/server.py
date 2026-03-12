@@ -425,7 +425,7 @@ def get_blender_connection():
 
 
 # Import modular tools to register them after get_blender_connection is defined.
-from .tools import camera, composition, lighting, materials
+from .tools import camera, composition, jobs, lighting, materials, tripo3d
 
 
 @telemetry_tool("get_scene_info")

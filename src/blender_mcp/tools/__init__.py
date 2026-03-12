@@ -15,4 +15,12 @@ __all__ = [
     "lighting",
     "camera",
     "composition",
+    "rigging",
+    "animation",
+    "procedural_materials",
+    "atmospherics",
+    "render_farm",
+    "production",
+    "ai_creative",
+    "tripo3d",
 ]

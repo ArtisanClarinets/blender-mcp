@@ -24,6 +24,7 @@ from .handlers import (
     assets_sketchfab,
     jobs_hyper3d,
     jobs_hunyuan,
+    jobs_tripo3d,
 )
 
 
@@ -345,6 +346,16 @@ class BlenderMCPServer:
         elif command_type == "import_generated_asset_hunyuan":
             return jobs_hunyuan.import_asset(params)
 
+        # Jobs - Tripo3D
+        elif command_type == "get_tripo3d_status":
+            return jobs_tripo3d.get_status()
+        elif command_type == "generate_tripo3d_model":
+            return jobs_tripo3d.generate_model(params)
+        elif command_type == "poll_tripo3d_status":
+            return jobs_tripo3d.poll_job_status(params)
+        elif command_type == "import_tripo3d_model":
+            return jobs_tripo3d.import_model(params)
+
         # Unified job API
         elif command_type == "create_job":
             provider = params.get("provider")
@@ -352,20 +363,22 @@ class BlenderMCPServer:
                 return jobs_hyper3d.create_job(params.get("payload", {}))
             elif provider == "hunyuan3d":
                 return jobs_hunyuan.create_job(params.get("payload", {}))
+            elif provider == "tripo3d":
+                return jobs_tripo3d.create_job(params.get("payload", {}))
             else:
                 raise ValueError(f"Unknown provider: {provider}")
         elif command_type == "get_job":
-            # Try both providers
-            result = jobs_hyper3d.get_job(params)
-            if not result:
-                result = jobs_hunyuan.get_job(params)
-            return result
+            for handler in (jobs_hyper3d, jobs_hunyuan, jobs_tripo3d):
+                result = handler.get_job(params)
+                if result:
+                    return result
+            raise ValueError(f"Job not found: {params.get('job_id')}")
         elif command_type == "import_job_result":
-            # Try both providers
-            result = jobs_hyper3d.import_job_result(params)
-            if not result:
-                result = jobs_hunyuan.import_job_result(params)
-            return result
+            for handler in (jobs_hyper3d, jobs_hunyuan, jobs_tripo3d):
+                job = handler.get_job(params)
+                if job:
+                    return handler.import_job_result(params)
+            raise ValueError(f"Job not found: {params.get('job_id')}")
 
         else:
             raise ValueError(f"Unknown command type: {command_type}")

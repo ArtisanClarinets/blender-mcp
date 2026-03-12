@@ -140,3 +140,124 @@ async def export_scene_bundle(
     except Exception as e:
         logger.error(f"Error exporting scene bundle: {str(e)}")
         return json.dumps({"error": str(e)})
+
+
+
+# Add these new functions to the existing export.py file
+
+@telemetry_tool("setup_render_passes")
+@mcp.tool()
+async def setup_render_passes(
+    ctx: Context,
+    passes: List[str],
+    file_format: str = "EXR",
+    color_depth: str = "16",
+    compression: str = "zip",
+) -> str:
+    """
+    Setup multiple render passes for compositing.
+    
+    Parameters:
+    - passes: List of render passes ("AO", "Z", "Normal", "Vector", etc.)
+    - file_format: Output file format
+    - color_depth: Bit depth
+    - compression: Compression method
+    
+    Returns:
+    - JSON string with render passes setup result
+    """
+    try:
+        blender = get_blender_connection()
+        
+        params = {
+            "passes": passes,
+            "file_format": file_format,
+            "color_depth": color_depth,
+            "compression": compression,
+        }
+        
+        result = blender.send_command("setup_render_passes", params)
+        return json.dumps(result, indent=2)
+        
+    except Exception as e:
+        logger.error(f"Error setting up render passes: {str(e)}")
+        return json.dumps({"error": str(e)})
+
+@telemetry_tool("render_animation_passes")
+@mcp.tool()
+async def render_animation_passes(
+    ctx: Context,
+    frame_start: int,
+    frame_end: int,
+    output_path: str,
+    passes: Optional[List[str]] = None,
+    resolution: Optional[List[int]] = None,
+) -> str:
+    """
+    Render animation with multiple passes.
+    
+    Parameters:
+    - frame_start: Start frame
+    - frame_end: End frame
+    - output_path: Output directory
+    - passes: Optional list of passes
+    - resolution: Optional resolution [width, height]
+    
+    Returns:
+    - JSON string with animation render result
+    """
+    try:
+        blender = get_blender_connection()
+        
+        params = {
+            "frame_start": frame_start,
+            "frame_end": frame_end,
+            "output_path": output_path,
+        }
+        
+        if passes:
+            params["passes"] = passes
+        if resolution:
+            params["resolution"] = resolution
+            
+        result = blender.send_command("render_animation_passes", params)
+        return json.dumps(result, indent=2)
+        
+    except Exception as e:
+        logger.error(f"Error rendering animation passes: {str(e)}")
+        return json.dumps({"error": str(e)})
+
+@telemetry_tool("setup_stereoscopic_render")
+@mcp.tool()
+async def setup_stereoscopic_render(
+    ctx: Context,
+    eye_separation: float = 0.065,
+    convergence_distance: float = 1.0,
+    mode: str = "parallel",
+) -> str:
+    """
+    Setup stereoscopic rendering for VR/3D content.
+    
+    Parameters:
+    - eye_separation: Distance between eyes
+    - convergence_distance: Convergence distance
+    - mode: Stereo mode ("parallel", "toe-in", "off-axis")
+    
+    Returns:
+    - JSON string with stereoscopic setup result
+    """
+    try:
+        blender = get_blender_connection()
+        
+        params = {
+            "eye_separation": eye_separation,
+            "convergence_distance": convergence_distance,
+            "mode": mode,
+        }
+        
+        result = blender.send_command("setup_stereoscopic_render", params)
+        return json.dumps(result, indent=2)
+        
+    except Exception as e:
+        logger.error(f"Error setting up stereoscopic render: {str(e)}")
+        return json.dumps({"error": str(e)})

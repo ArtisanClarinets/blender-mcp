@@ -144,6 +144,15 @@ def _load_addon_server(
         get_job=Mock(return_value=None),
         import_job_result=Mock(return_value=None),
     )
+    jobs_tripo3d = types.SimpleNamespace(
+        get_status=Mock(),
+        generate_model=Mock(),
+        poll_job_status=Mock(),
+        import_model=Mock(),
+        create_job=Mock(),
+        get_job=Mock(return_value=None),
+        import_job_result=Mock(return_value=None),
+    )
     protocol = types.SimpleNamespace(
         parse_command=Mock(),
         create_error_response=Mock(),
@@ -167,6 +176,7 @@ def _load_addon_server(
     handlers_module.assets_sketchfab = assets_sketchfab
     handlers_module.jobs_hyper3d = jobs_hyper3d
     handlers_module.jobs_hunyuan = jobs_hunyuan
+    handlers_module.jobs_tripo3d = jobs_tripo3d
 
     package = types.ModuleType("blender_mcp_addon")
     package.__path__ = [str(Path(__file__).resolve().parents[1] / "blender_mcp_addon")]
@@ -189,6 +199,7 @@ def _load_addon_server(
             "blender_mcp_addon.handlers.assets_sketchfab": assets_sketchfab,
             "blender_mcp_addon.handlers.jobs_hyper3d": jobs_hyper3d,
             "blender_mcp_addon.handlers.jobs_hunyuan": jobs_hunyuan,
+            "blender_mcp_addon.handlers.jobs_tripo3d": jobs_tripo3d,
         },
     ):
         module_name = "blender_mcp_addon.server"
@@ -414,6 +425,15 @@ def test_addon_dispatch_routes_glass_material_command():
         get_job=Mock(return_value=None),
         import_job_result=Mock(return_value=None),
     )
+    jobs_tripo3d = types.SimpleNamespace(
+        get_status=Mock(),
+        generate_model=Mock(),
+        poll_job_status=Mock(),
+        import_model=Mock(),
+        create_job=Mock(),
+        get_job=Mock(return_value=None),
+        import_job_result=Mock(return_value=None),
+    )
     protocol = types.SimpleNamespace(
         parse_command=Mock(),
         create_error_response=Mock(),
@@ -437,6 +457,7 @@ def test_addon_dispatch_routes_glass_material_command():
     handlers_module.assets_sketchfab = assets_sketchfab
     handlers_module.jobs_hyper3d = jobs_hyper3d
     handlers_module.jobs_hunyuan = jobs_hunyuan
+    handlers_module.jobs_tripo3d = jobs_tripo3d
 
     package = types.ModuleType("blender_mcp_addon")
     package.__path__ = [str(Path(__file__).resolve().parents[1] / "blender_mcp_addon")]
@@ -459,6 +480,7 @@ def test_addon_dispatch_routes_glass_material_command():
             "blender_mcp_addon.handlers.assets_sketchfab": assets_sketchfab,
             "blender_mcp_addon.handlers.jobs_hyper3d": jobs_hyper3d,
             "blender_mcp_addon.handlers.jobs_hunyuan": jobs_hunyuan,
+            "blender_mcp_addon.handlers.jobs_tripo3d": jobs_tripo3d,
         },
     ):
         module_name = "blender_mcp_addon.server"
@@ -553,6 +575,15 @@ def test_addon_dispatch_routes_area_light_command():
         get_job=Mock(return_value=None),
         import_job_result=Mock(return_value=None),
     )
+    jobs_tripo3d = types.SimpleNamespace(
+        get_status=Mock(),
+        generate_model=Mock(),
+        poll_job_status=Mock(),
+        import_model=Mock(),
+        create_job=Mock(),
+        get_job=Mock(return_value=None),
+        import_job_result=Mock(return_value=None),
+    )
     protocol = types.SimpleNamespace(
         parse_command=Mock(),
         create_error_response=Mock(),
@@ -576,6 +607,7 @@ def test_addon_dispatch_routes_area_light_command():
     handlers_module.assets_sketchfab = assets_sketchfab
     handlers_module.jobs_hyper3d = jobs_hyper3d
     handlers_module.jobs_hunyuan = jobs_hunyuan
+    handlers_module.jobs_tripo3d = jobs_tripo3d
 
     package = types.ModuleType("blender_mcp_addon")
     package.__path__ = [str(Path(__file__).resolve().parents[1] / "blender_mcp_addon")]
@@ -598,6 +630,7 @@ def test_addon_dispatch_routes_area_light_command():
             "blender_mcp_addon.handlers.assets_sketchfab": assets_sketchfab,
             "blender_mcp_addon.handlers.jobs_hyper3d": jobs_hyper3d,
             "blender_mcp_addon.handlers.jobs_hunyuan": jobs_hunyuan,
+            "blender_mcp_addon.handlers.jobs_tripo3d": jobs_tripo3d,
         },
     ):
         module_name = "blender_mcp_addon.server"

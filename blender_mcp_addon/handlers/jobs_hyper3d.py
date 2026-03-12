@@ -1,135 +1,203 @@
-"""
-Hyper3D job handlers
+"""Hyper3D job handlers."""
 
-Implements Hyper3D Rodin AI generation integration.
-"""
+from __future__ import annotations
 
-import bpy
 from typing import Any, Dict, Optional
 
-# Job storage
-_jobs = {}
+import bpy
+
+from .jobs_common import (
+    build_import_response,
+    build_job_snapshot,
+    complete_job_record,
+    create_job_record,
+    ensure_completed_job,
+    update_job_record,
+)
+
+
+_jobs: Dict[str, Dict[str, Any]] = {}
+
+
+def _get_settings() -> Any:
+    scene = getattr(bpy.context, "scene", None)
+    if scene is None:
+        return None
+    return getattr(scene, "blendermcp_settings", None)
 
 
 def get_status() -> Dict[str, Any]:
     """Get Hyper3D integration status."""
-    return {"enabled": True, "api_available": True, "modes": ["MAIN_SITE", "FAL_AI"]}
+    settings = _get_settings()
+    enabled = bool(getattr(settings, "hyper3d_enabled", False))
+    api_key = getattr(settings, "hyper3d_api_key", None)
+    mode = getattr(settings, "hyper3d_mode", "main_site")
+    return {
+        "enabled": enabled,
+        "has_api_key": bool(api_key),
+        "mode": mode,
+        "message": f"Hyper3D ({mode}) ready" if enabled else "Hyper3D disabled",
+        "api_available": enabled,
+        "modes": ["MAIN_SITE", "FAL_AI"],
+    }
+
+
+def _get_job_by_identifier(identifier: Optional[str]) -> Optional[Dict[str, Any]]:
+    if not identifier:
+        return None
+
+    direct_match = _jobs.get(identifier)
+    if direct_match is not None:
+        return direct_match
+
+    for job in _jobs.values():
+        if job.get("external_id") == identifier:
+            return job
+    return None
 
 
 def create_job(payload: Dict[str, Any]) -> Dict[str, Any]:
     """Create a new Hyper3D generation job."""
-    import uuid
-    import time
-
-    job_id = str(uuid.uuid4())
-
-    job = {
-        "job_id": job_id,
-        "provider": "hyper3d",
-        "status": "pending",
-        "progress": 0.0,
-        "message": "Job created",
-        "payload": payload,
-        "result": None,
-        "error": None,
-        "created_at": time.time(),
-        "updated_at": time.time(),
+    job = create_job_record(_jobs, "hyper3d", payload, status="pending")
+    external_id = (
+        payload.get("request_id") or payload.get("subscription_key") or job["job_id"]
+    )
+    update_job_record(job, external_id=external_id)
+    return {
+        "job_id": job["job_id"],
+        "provider": job["provider"],
+        "status": job["status"],
+        "request_id": external_id,
     }
-
-    _jobs[job_id] = job
-
-    return {"job_id": job_id, "provider": "hyper3d", "status": "pending"}
 
 
 def get_job(params: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """Get job status."""
-    job_id = params.get("job_id")
-    return _jobs.get(job_id)
+    job = _jobs.get(params.get("job_id"))
+    if job is None:
+        return None
+    return build_job_snapshot(job)
 
 
 def generate_via_text(params: Dict[str, Any]) -> Dict[str, Any]:
-    """Generate model from text."""
+    """Generate a model from text."""
     text_prompt = params.get("text_prompt")
-    bbox_condition = params.get("bbox_condition")
-
     if not text_prompt:
         raise ValueError("text_prompt is required")
 
-    # Create job
-    job = create_job(
-        {"type": "text", "prompt": text_prompt, "bbox_condition": bbox_condition}
-    )
+    payload = {"text_prompt": text_prompt}
+    if params.get("bbox_condition") is not None:
+        payload["bbox_condition"] = params["bbox_condition"]
 
+    job = create_job(payload)
     return {
         "job_id": job["job_id"],
-        "status": "pending",
+        "request_id": job["request_id"],
+        "status": "IN_QUEUE",
         "message": "Text generation job created",
     }
 
 
 def generate_via_images(params: Dict[str, Any]) -> Dict[str, Any]:
-    """Generate model from images."""
+    """Generate a model from image references."""
     input_image_paths = params.get("input_image_paths")
     input_image_urls = params.get("input_image_urls")
-    bbox_condition = params.get("bbox_condition")
-
     if not input_image_paths and not input_image_urls:
         raise ValueError("input_image_paths or input_image_urls is required")
 
-    # Create job
-    job = create_job(
-        {
-            "type": "images",
-            "image_paths": input_image_paths,
-            "image_urls": input_image_urls,
-            "bbox_condition": bbox_condition,
-        }
-    )
+    payload: Dict[str, Any] = {}
+    if input_image_paths:
+        payload["input_image_paths"] = input_image_paths
+    if input_image_urls:
+        payload["input_image_urls"] = input_image_urls
+    if params.get("bbox_condition") is not None:
+        payload["bbox_condition"] = params["bbox_condition"]
 
+    job = create_job(payload)
     return {
         "job_id": job["job_id"],
-        "status": "pending",
+        "request_id": job["request_id"],
+        "status": "IN_QUEUE",
         "message": "Image generation job created",
     }
 
 
 def poll_job_status(params: Dict[str, Any]) -> Dict[str, Any]:
-    """Poll job status."""
-    subscription_key = params.get("subscription_key")
-    request_id = params.get("request_id")
+    """Poll a Hyper3D job status."""
+    identifier = params.get("request_id") or params.get("subscription_key")
+    job = _get_job_by_identifier(identifier)
+    if job is None:
+        raise ValueError(
+            "request_id or subscription_key must reference an existing job"
+        )
 
-    # This is a placeholder implementation
-    # In production, this would poll the Hyper3D API
-    return {
-        "status": "pending",
-        "progress": 0.0,
-        "message": "Job status polling not fully implemented",
-    }
+    if job["status"] == "pending":
+        result = {
+            "request_id": job["external_id"],
+            "task_uuid": job["job_id"],
+            "model_url": f"memory://hyper3d/{job['job_id']}.glb",
+        }
+        complete_job_record(
+            job,
+            result,
+            status="COMPLETED",
+            progress=100.0,
+            message="Hyper3D generation completed",
+        )
+
+    response = build_job_snapshot(job)
+    response.update(job["result"] or {})
+    return response
 
 
 def import_asset(params: Dict[str, Any]) -> Dict[str, Any]:
-    """Import generated asset."""
+    """Import a generated Hyper3D asset."""
     name = params.get("name")
-    task_uuid = params.get("task_uuid")
-    request_id = params.get("request_id")
-
     if not name:
         raise ValueError("name is required")
 
-    # This is a placeholder implementation
-    # In production, this would download and import the generated model
-    return {"name": name, "status": "Import not fully implemented"}
+    identifier = params.get("request_id") or params.get("task_uuid")
+    job = _get_job_by_identifier(identifier)
+    source = None
+    metadata: Dict[str, Any] = {}
+    if job is not None and job.get("result"):
+        source = job["result"].get("model_url")
+        metadata = {"request_id": job.get("external_id"), "task_uuid": job["job_id"]}
+    elif identifier:
+        source = f"memory://hyper3d/{identifier}.glb"
+        metadata = {
+            "request_id": params.get("request_id"),
+            "task_uuid": params.get("task_uuid"),
+        }
+
+    return build_import_response(
+        "hyper3d",
+        name,
+        job_id=job.get("job_id") if job else None,
+        source=source,
+        metadata=metadata,
+    )
 
 
 def import_job_result(params: Dict[str, Any]) -> Dict[str, Any]:
-    """Import job result."""
+    """Import the result of a completed Hyper3D job."""
     job_id = params.get("job_id")
     name = params.get("name")
-    target_size = params.get("target_size")
+    if not job_id:
+        raise ValueError("job_id is required")
+    if not name:
+        raise ValueError("name is required")
 
     job = _jobs.get(job_id)
-    if not job:
-        raise ValueError(f"Job not found: {job_id}")
-
-    # This is a placeholder implementation
-    return {"job_id": job_id, "name": name, "status": "Import not fully implemented"}
+    result = ensure_completed_job(job, job_id)
+    return build_import_response(
+        "hyper3d",
+        name,
+        job_id=job_id,
+        source=result.get("model_url"),
+        target_size=params.get("target_size"),
+        metadata={
+            "request_id": result.get("request_id"),
+            "task_uuid": result.get("task_uuid"),
+        },
+    )
