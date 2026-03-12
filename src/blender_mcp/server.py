@@ -454,7 +454,7 @@ def get_object_info(ctx: Context, object_name: str) -> str:
     """
     try:
         blender = get_blender_connection()
-        result = blender.send_command("get_object_info", {"name": object_name})
+        result = blender.send_command("get_object_info", {"object_name": object_name})
 
         # Just return the JSON representation of what Blender sent us
         return json.dumps(result, indent=2)
@@ -518,7 +518,7 @@ def execute_blender_code(ctx: Context, code: str) -> str:
     try:
         # Get the global connection
         blender = get_blender_connection()
-        result = blender.send_command("execute_code", {"code": code})
+        result = blender.send_command("execute_blender_code", {"code": code})
         return f"Code executed successfully: {result.get('result', '')}"
     except Exception as e:
         logger.error(f"Error executing code: {str(e)}")

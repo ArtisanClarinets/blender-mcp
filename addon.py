@@ -3515,6 +3515,32 @@ def _dispatch_hyper3d_command_fallback(command_type, params):
     if command_type == "get_hyper3d_status":
         return get_hyper3d_status()
 
+    if command_type == "create_rodin_job":
+        text_prompt = params.get("text_prompt")
+        images = params.get("images")
+        bbox_condition = params.get("bbox_condition")
+
+        payload = {}
+        if text_prompt:
+            payload["text_prompt"] = text_prompt
+        if images:
+            payload["images"] = images
+        if bbox_condition is not None:
+            payload["bbox_condition"] = bbox_condition
+
+        job = _legacy_create_provider_job("hyper3d", payload)
+        job["external_id"] = job["job_id"]
+        job["updated_at"] = datetime.utcnow().isoformat()
+        return {
+            "uuid": job["job_id"],
+            "submit_time": True,
+            "jobs": {"subscription_key": job["job_id"]},
+            "job_id": job["job_id"],
+            "request_id": job["external_id"],
+            "status": "IN_QUEUE",
+            "message": "Generation job created",
+        }
+
     if command_type == "generate_hyper3d_model_via_text":
         text_prompt = params.get("text_prompt")
         if not text_prompt:
@@ -3619,6 +3645,8 @@ def _dispatch_hyper3d_command(command_type, params):
 
     if command_type == "get_hyper3d_status":
         return jobs_hyper3d.get_status()
+    if command_type == "create_rodin_job":
+        return jobs_hyper3d.create_job(params)
     if command_type == "generate_hyper3d_model_via_text":
         return jobs_hyper3d.generate_via_text(params)
     if command_type == "generate_hyper3d_model_via_images":
@@ -3634,6 +3662,26 @@ def _dispatch_hyper3d_command(command_type, params):
 def _dispatch_hunyuan3d_command_fallback(command_type, params):
     if command_type == "get_hunyuan3d_status":
         return get_hunyuan3d_status()
+
+    if command_type == "create_hunyuan_job":
+        text_prompt = params.get("text_prompt")
+        input_image_url = params.get("image")
+        if not text_prompt and not input_image_url:
+            raise ValueError("text_prompt or image is required")
+
+        payload = {}
+        if text_prompt:
+            payload["text_prompt"] = text_prompt
+        if input_image_url:
+            payload["input_image_url"] = input_image_url
+
+        job = _legacy_create_provider_job("hunyuan3d", payload)
+        return {
+            "Response": {"JobId": job["job_id"].replace("job_", "")},
+            "job_id": job["job_id"],
+            "status": "RUN",
+            "message": "Generation job created",
+        }
 
     if command_type == "generate_hunyuan3d_model":
         text_prompt = params.get("text_prompt")
@@ -3695,6 +3743,8 @@ def _dispatch_hunyuan3d_command(command_type, params):
 
     if command_type == "get_hunyuan3d_status":
         return jobs_hunyuan.get_status()
+    if command_type == "create_hunyuan_job":
+        return jobs_hunyuan.create_job(params)
     if command_type == "generate_hunyuan3d_model":
         return jobs_hunyuan.generate_model(params)
     if command_type == "poll_hunyuan_job_status":
@@ -3807,6 +3857,46 @@ def _dispatch_material_command(command_type, params):
         return material_handlers.delete_material(params)
 
     raise ValueError(f"Unknown material command type: {command_type}")
+
+
+def _dispatch_polyhaven_command(command_type, params):
+    """Dispatch PolyHaven commands through modular handlers."""
+    try:
+        from blender_mcp_addon.handlers import assets_polyhaven
+    except ImportError:
+        raise ImportError(
+            "PolyHaven handlers not available. Please ensure blender_mcp_addon is installed."
+        )
+
+    if command_type == "get_polyhaven_categories":
+        return assets_polyhaven.get_categories(params)
+    elif command_type == "search_polyhaven_assets":
+        return assets_polyhaven.search_assets(params)
+    elif command_type == "download_polyhaven_asset":
+        return assets_polyhaven.download_asset(params)
+    elif command_type == "set_texture":
+        return assets_polyhaven.set_texture(params)
+
+    raise ValueError(f"Unknown PolyHaven command type: {command_type}")
+
+
+def _dispatch_sketchfab_command(command_type, params):
+    """Dispatch Sketchfab commands through modular handlers."""
+    try:
+        from blender_mcp_addon.handlers import assets_sketchfab
+    except ImportError:
+        raise ImportError(
+            "Sketchfab handlers not available. Please ensure blender_mcp_addon is installed."
+        )
+
+    if command_type == "search_sketchfab_models":
+        return assets_sketchfab.search_models(params)
+    elif command_type == "get_sketchfab_model_preview":
+        return assets_sketchfab.get_model_preview(params)
+    elif command_type == "download_sketchfab_model":
+        return assets_sketchfab.download_model(params)
+
+    raise ValueError(f"Unknown Sketchfab command type: {command_type}")
 
 
 class BlenderMCPServer:
@@ -4089,10 +4179,24 @@ class BlenderMCPServer:
         # Provider Status
         elif command_type == "get_polyhaven_status":
             return get_polyhaven_status()
+        elif command_type in {
+            "get_polyhaven_categories",
+            "search_polyhaven_assets",
+            "download_polyhaven_asset",
+            "set_texture",
+        }:
+            return _dispatch_polyhaven_command(command_type, params)
         elif command_type == "get_sketchfab_status":
             return get_sketchfab_status()
         elif command_type in {
+            "search_sketchfab_models",
+            "get_sketchfab_model_preview",
+            "download_sketchfab_model",
+        }:
+            return _dispatch_sketchfab_command(command_type, params)
+        elif command_type in {
             "get_hyper3d_status",
+            "create_rodin_job",
             "generate_hyper3d_model_via_text",
             "generate_hyper3d_model_via_images",
             "poll_rodin_job_status",
@@ -4101,6 +4205,7 @@ class BlenderMCPServer:
             return _dispatch_hyper3d_command(command_type, params)
         elif command_type in {
             "get_hunyuan3d_status",
+            "create_hunyuan_job",
             "generate_hunyuan3d_model",
             "poll_hunyuan_job_status",
             "import_generated_asset_hunyuan",
