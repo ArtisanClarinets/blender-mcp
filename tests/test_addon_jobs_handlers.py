@@ -4,6 +4,8 @@ import types
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 HANDLERS_ROOT = PROJECT_ROOT / "blender_mcp_addon" / "handlers"
@@ -123,10 +125,24 @@ def test_hyper3d_job_flow_supports_unified_create_get_import():
         "deferred_import": True,
         "job_id": created["job_id"],
         "source": polled["model_url"],
+        "model_url": polled["model_url"],
         "target_size": 1.25,
         "request_id": created["request_id"],
         "task_uuid": created["job_id"],
     }
+
+
+def test_hyper3d_create_job_rejects_empty_or_impossible_payloads():
+    module = _load_handler_module("jobs_hyper3d", _make_fake_bpy())
+
+    with pytest.raises(
+        ValueError,
+        match="text_prompt, input_image_paths, or input_image_urls is required",
+    ):
+        module.create_job({})
+
+    with pytest.raises(ValueError, match="input_image_urls must be a non-empty list"):
+        module.create_job({"input_image_urls": "memory://reference.png"})
 
 
 def test_hunyuan_job_flow_supports_unified_create_get_import():
@@ -154,6 +170,16 @@ def test_hunyuan_job_flow_supports_unified_create_get_import():
         "target_size": 0.4,
         "zip_file_url": polled["zip_file_url"],
     }
+
+
+def test_hunyuan_create_job_rejects_missing_inputs():
+    module = _load_handler_module("jobs_hunyuan", _make_fake_bpy())
+
+    with pytest.raises(ValueError, match="text_prompt or input_image_url is required"):
+        module.create_job({})
+
+    with pytest.raises(ValueError, match="text_prompt or input_image_url is required"):
+        module.create_job({"text_prompt": "   ", "input_image_url": "   "})
 
 
 def test_hunyuan_generation_accepts_image_without_text_prompt():

@@ -18,6 +18,31 @@ from .jobs_common import (
 _jobs: Dict[str, Dict[str, Any]] = {}
 
 
+def _normalize_optional_string(value: Any) -> Optional[str]:
+    if not isinstance(value, str):
+        return None
+    normalized_value = value.strip()
+    return normalized_value or None
+
+
+def _build_generation_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
+    if not isinstance(payload, dict):
+        raise ValueError("payload must be an object")
+
+    normalized_payload: Dict[str, Any] = {}
+    text_prompt = _normalize_optional_string(payload.get("text_prompt"))
+    input_image_url = _normalize_optional_string(payload.get("input_image_url"))
+
+    if text_prompt is not None:
+        normalized_payload["text_prompt"] = text_prompt
+    if input_image_url is not None:
+        normalized_payload["input_image_url"] = input_image_url
+    if not normalized_payload:
+        raise ValueError("text_prompt or input_image_url is required")
+
+    return normalized_payload
+
+
 def _get_settings() -> Any:
     scene = getattr(bpy.context, "scene", None)
     if scene is None:
@@ -44,7 +69,8 @@ def get_status() -> Dict[str, Any]:
 
 def create_job(payload: Dict[str, Any]) -> Dict[str, Any]:
     """Create a new Hunyuan3D generation job."""
-    job = create_job_record(_jobs, "hunyuan3d", payload, status="pending")
+    normalized_payload = _build_generation_payload(payload)
+    job = create_job_record(_jobs, "hunyuan3d", normalized_payload, status="pending")
     return {
         "job_id": job["job_id"],
         "provider": job["provider"],

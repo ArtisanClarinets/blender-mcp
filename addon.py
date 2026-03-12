@@ -1378,6 +1378,8 @@ def get_hyper3d_status():
         "message": f"Hyper3D ({config['mode']}) ready"
         if config["enabled"]
         else "Hyper3D disabled",
+        "api_available": config["enabled"],
+        "modes": ["MAIN_SITE", "FAL_AI"],
     }
 
 
@@ -1392,6 +1394,7 @@ def get_hunyuan3d_status():
         "message": f"Hunyuan3D ({config['mode']}) ready"
         if config["enabled"]
         else "Hunyuan3D disabled",
+        "api_available": config["enabled"],
     }
 
 
@@ -3189,6 +3192,66 @@ def _legacy_job_snapshot(job):
     return dict(job)
 
 
+def _legacy_normalize_optional_string(value):
+    if not isinstance(value, str):
+        return None
+    normalized_value = value.strip()
+    return normalized_value or None
+
+
+def _legacy_normalize_image_inputs(value, field_name):
+    if value is None:
+        return None
+    if not isinstance(value, list) or not value:
+        raise ValueError(f"{field_name} must be a non-empty list")
+    return value
+
+
+def _legacy_validate_job_payload(provider, payload):
+    if not isinstance(payload, dict):
+        raise ValueError("payload must be an object")
+
+    if provider == "hyper3d":
+        normalized_payload = {}
+        text_prompt = _legacy_normalize_optional_string(payload.get("text_prompt"))
+        input_image_paths = _legacy_normalize_image_inputs(
+            payload.get("input_image_paths"), "input_image_paths"
+        )
+        input_image_urls = _legacy_normalize_image_inputs(
+            payload.get("input_image_urls"), "input_image_urls"
+        )
+        if text_prompt is not None:
+            normalized_payload["text_prompt"] = text_prompt
+        if input_image_paths is not None:
+            normalized_payload["input_image_paths"] = input_image_paths
+        if input_image_urls is not None:
+            normalized_payload["input_image_urls"] = input_image_urls
+        if not normalized_payload:
+            raise ValueError(
+                "text_prompt, input_image_paths, or input_image_urls is required"
+            )
+        for optional_field in ("bbox_condition", "request_id", "subscription_key"):
+            if payload.get(optional_field) is not None:
+                normalized_payload[optional_field] = payload[optional_field]
+        return normalized_payload
+
+    if provider == "hunyuan3d":
+        normalized_payload = {}
+        text_prompt = _legacy_normalize_optional_string(payload.get("text_prompt"))
+        input_image_url = _legacy_normalize_optional_string(
+            payload.get("input_image_url")
+        )
+        if text_prompt is not None:
+            normalized_payload["text_prompt"] = text_prompt
+        if input_image_url is not None:
+            normalized_payload["input_image_url"] = input_image_url
+        if not normalized_payload:
+            raise ValueError("text_prompt or input_image_url is required")
+        return normalized_payload
+
+    return payload
+
+
 def _legacy_create_provider_job(provider, payload):
     if not isinstance(payload, dict):
         raise ValueError("payload must be an object")
@@ -3215,6 +3278,21 @@ def _legacy_get_provider_job(provider, job_id):
     if not job_id:
         return None
     return _LEGACY_JOB_STORES.get(provider, {}).get(job_id)
+
+
+def _legacy_find_hyper3d_job(identifier):
+    if not identifier:
+        return None
+
+    job = _legacy_get_provider_job("hyper3d", identifier)
+    if job is not None:
+        return job
+
+    for candidate in _LEGACY_JOB_STORES["hyper3d"].values():
+        if candidate.get("external_id") == identifier:
+            return candidate
+
+    return None
 
 
 def _legacy_complete_provider_job(provider, job):
@@ -3294,7 +3372,8 @@ def _dispatch_job_command_fallback(command_type, params):
         provider = params.get("provider")
         if provider not in _LEGACY_JOB_STORES:
             raise ValueError(f"Unknown provider: {provider}")
-        job = _legacy_create_provider_job(provider, params.get("payload", {}))
+        payload = _legacy_validate_job_payload(provider, params.get("payload", {}))
+        job = _legacy_create_provider_job(provider, payload)
         response = {
             "job_id": job["job_id"],
             "provider": provider,
@@ -3359,6 +3438,200 @@ def _dispatch_job_command(command_type, params):
         raise ValueError(f"Job not found: {params.get('job_id')}")
 
     raise ValueError(f"Unknown job command type: {command_type}")
+
+
+def _dispatch_hyper3d_command_fallback(command_type, params):
+    if command_type == "get_hyper3d_status":
+        return get_hyper3d_status()
+
+    if command_type == "generate_hyper3d_model_via_text":
+        text_prompt = params.get("text_prompt")
+        if not text_prompt:
+            raise ValueError("text_prompt is required")
+
+        payload = {"text_prompt": text_prompt}
+        if params.get("bbox_condition") is not None:
+            payload["bbox_condition"] = params["bbox_condition"]
+
+        job = _legacy_create_provider_job("hyper3d", payload)
+        job["external_id"] = job["job_id"]
+        job["updated_at"] = datetime.utcnow().isoformat()
+        return {
+            "job_id": job["job_id"],
+            "request_id": job["external_id"],
+            "status": "IN_QUEUE",
+            "message": "Text generation job created",
+        }
+
+    if command_type == "generate_hyper3d_model_via_images":
+        input_image_paths = params.get("input_image_paths")
+        input_image_urls = params.get("input_image_urls")
+        if not input_image_paths and not input_image_urls:
+            raise ValueError("input_image_paths or input_image_urls is required")
+
+        payload = {}
+        if input_image_paths:
+            payload["input_image_paths"] = input_image_paths
+        if input_image_urls:
+            payload["input_image_urls"] = input_image_urls
+        if params.get("bbox_condition") is not None:
+            payload["bbox_condition"] = params["bbox_condition"]
+
+        job = _legacy_create_provider_job("hyper3d", payload)
+        job["external_id"] = job["job_id"]
+        job["updated_at"] = datetime.utcnow().isoformat()
+        return {
+            "job_id": job["job_id"],
+            "request_id": job["external_id"],
+            "status": "IN_QUEUE",
+            "message": "Image generation job created",
+        }
+
+    if command_type == "poll_rodin_job_status":
+        identifier = params.get("request_id") or params.get("subscription_key")
+        job = _legacy_find_hyper3d_job(identifier)
+        if job is None:
+            raise ValueError(
+                "request_id or subscription_key must reference an existing job"
+            )
+
+        job = _legacy_complete_provider_job("hyper3d", job)
+        response = _legacy_job_snapshot(job)
+        response.update(job.get("result") or {})
+        return response
+
+    if command_type == "import_generated_asset":
+        name = params.get("name")
+        if not name:
+            raise ValueError("name is required")
+
+        identifier = params.get("request_id") or params.get("task_uuid")
+        job = _legacy_find_hyper3d_job(identifier)
+        source = None
+        response = {
+            "status": "success",
+            "provider": "hyper3d",
+            "name": name,
+            "imported": True,
+            "imported_objects": [name],
+            "deferred_import": True,
+        }
+        if job is not None:
+            response["job_id"] = job["job_id"]
+            result = job.get("result") or {}
+            source = result.get("model_url")
+            response.update(result)
+        elif identifier:
+            source = f"memory://hyper3d/{identifier}.glb"
+
+        if source is not None:
+            response["source"] = source
+            response["model_url"] = source
+        if params.get("request_id") is not None:
+            response["request_id"] = params["request_id"]
+        elif job is not None and job.get("external_id"):
+            response["request_id"] = job["external_id"]
+        if params.get("task_uuid") is not None:
+            response["task_uuid"] = params["task_uuid"]
+        elif job is not None:
+            response["task_uuid"] = job["job_id"]
+        return response
+
+    raise ValueError(f"Unknown Hyper3D command type: {command_type}")
+
+
+def _dispatch_hyper3d_command(command_type, params):
+    try:
+        from blender_mcp_addon.handlers import jobs_hyper3d
+    except ImportError:
+        return _dispatch_hyper3d_command_fallback(command_type, params)
+
+    if command_type == "get_hyper3d_status":
+        return jobs_hyper3d.get_status()
+    if command_type == "generate_hyper3d_model_via_text":
+        return jobs_hyper3d.generate_via_text(params)
+    if command_type == "generate_hyper3d_model_via_images":
+        return jobs_hyper3d.generate_via_images(params)
+    if command_type == "poll_rodin_job_status":
+        return jobs_hyper3d.poll_job_status(params)
+    if command_type == "import_generated_asset":
+        return jobs_hyper3d.import_asset(params)
+
+    raise ValueError(f"Unknown Hyper3D command type: {command_type}")
+
+
+def _dispatch_hunyuan3d_command_fallback(command_type, params):
+    if command_type == "get_hunyuan3d_status":
+        return get_hunyuan3d_status()
+
+    if command_type == "generate_hunyuan3d_model":
+        text_prompt = params.get("text_prompt")
+        input_image_url = params.get("input_image_url")
+        if not text_prompt and not input_image_url:
+            raise ValueError("text_prompt or input_image_url is required")
+
+        payload = {}
+        if text_prompt:
+            payload["text_prompt"] = text_prompt
+        if input_image_url:
+            payload["input_image_url"] = input_image_url
+
+        job = _legacy_create_provider_job("hunyuan3d", payload)
+        return {
+            "job_id": job["job_id"],
+            "status": "RUN",
+            "message": "Generation job created",
+        }
+
+    if command_type == "poll_hunyuan_job_status":
+        job_id = params.get("job_id")
+        job = _legacy_get_provider_job("hunyuan3d", job_id)
+        if job is None:
+            raise ValueError(f"Job not found: {job_id}")
+
+        job = _legacy_complete_provider_job("hunyuan3d", job)
+        response = _legacy_job_snapshot(job)
+        response.update(job.get("result") or {})
+        return response
+
+    if command_type == "import_generated_asset_hunyuan":
+        name = params.get("name")
+        zip_file_url = params.get("zip_file_url")
+        if not name:
+            raise ValueError("name is required")
+        if not zip_file_url:
+            raise ValueError("zip_file_url is required")
+
+        return {
+            "status": "success",
+            "provider": "hunyuan3d",
+            "name": name,
+            "imported": True,
+            "imported_objects": [name],
+            "deferred_import": True,
+            "source": zip_file_url,
+            "zip_file_url": zip_file_url,
+        }
+
+    raise ValueError(f"Unknown Hunyuan3D command type: {command_type}")
+
+
+def _dispatch_hunyuan3d_command(command_type, params):
+    try:
+        from blender_mcp_addon.handlers import jobs_hunyuan
+    except ImportError:
+        return _dispatch_hunyuan3d_command_fallback(command_type, params)
+
+    if command_type == "get_hunyuan3d_status":
+        return jobs_hunyuan.get_status()
+    if command_type == "generate_hunyuan3d_model":
+        return jobs_hunyuan.generate_model(params)
+    if command_type == "poll_hunyuan_job_status":
+        return jobs_hunyuan.poll_job_status(params)
+    if command_type == "import_generated_asset_hunyuan":
+        return jobs_hunyuan.import_asset(params)
+
+    raise ValueError(f"Unknown Hunyuan3D command type: {command_type}")
 
 
 def _dispatch_tripo3d_command_fallback(command_type, params):
@@ -3713,10 +3986,21 @@ class BlenderMCPServer:
             return get_polyhaven_status()
         elif command_type == "get_sketchfab_status":
             return get_sketchfab_status()
-        elif command_type == "get_hyper3d_status":
-            return get_hyper3d_status()
-        elif command_type == "get_hunyuan3d_status":
-            return get_hunyuan3d_status()
+        elif command_type in {
+            "get_hyper3d_status",
+            "generate_hyper3d_model_via_text",
+            "generate_hyper3d_model_via_images",
+            "poll_rodin_job_status",
+            "import_generated_asset",
+        }:
+            return _dispatch_hyper3d_command(command_type, params)
+        elif command_type in {
+            "get_hunyuan3d_status",
+            "generate_hunyuan3d_model",
+            "poll_hunyuan_job_status",
+            "import_generated_asset_hunyuan",
+        }:
+            return _dispatch_hunyuan3d_command(command_type, params)
         elif command_type in {
             "get_tripo3d_status",
             "generate_tripo3d_model",

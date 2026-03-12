@@ -184,6 +184,7 @@ class TestMaterialsTools:
                 "subsurface_radius": [1.0, 0.3, 0.2],
                 "subsurface": 0.65,
                 "roughness": 0.45,
+                "subsurface_method": "random_walk",
             },
         )
 

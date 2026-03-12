@@ -19,6 +19,52 @@ from .jobs_common import (
 _jobs: Dict[str, Dict[str, Any]] = {}
 
 
+def _normalize_text_prompt(value: Any) -> Optional[str]:
+    if not isinstance(value, str):
+        return None
+    text_prompt = value.strip()
+    return text_prompt or None
+
+
+def _normalize_image_inputs(value: Any, field_name: str) -> Optional[list[Any]]:
+    if value is None:
+        return None
+    if not isinstance(value, list) or not value:
+        raise ValueError(f"{field_name} must be a non-empty list")
+    return value
+
+
+def _build_generation_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
+    if not isinstance(payload, dict):
+        raise ValueError("payload must be an object")
+
+    normalized_payload: Dict[str, Any] = {}
+    text_prompt = _normalize_text_prompt(payload.get("text_prompt"))
+    input_image_paths = _normalize_image_inputs(
+        payload.get("input_image_paths"), "input_image_paths"
+    )
+    input_image_urls = _normalize_image_inputs(
+        payload.get("input_image_urls"), "input_image_urls"
+    )
+
+    if text_prompt is not None:
+        normalized_payload["text_prompt"] = text_prompt
+    if input_image_paths is not None:
+        normalized_payload["input_image_paths"] = input_image_paths
+    if input_image_urls is not None:
+        normalized_payload["input_image_urls"] = input_image_urls
+    if not normalized_payload:
+        raise ValueError(
+            "text_prompt, input_image_paths, or input_image_urls is required"
+        )
+
+    for optional_field in ("bbox_condition", "request_id", "subscription_key"):
+        if payload.get(optional_field) is not None:
+            normalized_payload[optional_field] = payload[optional_field]
+
+    return normalized_payload
+
+
 def _get_settings() -> Any:
     scene = getattr(bpy.context, "scene", None)
     if scene is None:
@@ -58,9 +104,12 @@ def _get_job_by_identifier(identifier: Optional[str]) -> Optional[Dict[str, Any]
 
 def create_job(payload: Dict[str, Any]) -> Dict[str, Any]:
     """Create a new Hyper3D generation job."""
-    job = create_job_record(_jobs, "hyper3d", payload, status="pending")
+    normalized_payload = _build_generation_payload(payload)
+    job = create_job_record(_jobs, "hyper3d", normalized_payload, status="pending")
     external_id = (
-        payload.get("request_id") or payload.get("subscription_key") or job["job_id"]
+        normalized_payload.get("request_id")
+        or normalized_payload.get("subscription_key")
+        or job["job_id"]
     )
     update_job_record(job, external_id=external_id)
     return {
@@ -175,7 +224,7 @@ def import_asset(params: Dict[str, Any]) -> Dict[str, Any]:
         name,
         job_id=job.get("job_id") if job else None,
         source=source,
-        metadata=metadata,
+        metadata={**metadata, "model_url": source} if source is not None else metadata,
     )
 
 
@@ -197,6 +246,7 @@ def import_job_result(params: Dict[str, Any]) -> Dict[str, Any]:
         source=result.get("model_url"),
         target_size=params.get("target_size"),
         metadata={
+            "model_url": result.get("model_url"),
             "request_id": result.get("request_id"),
             "task_uuid": result.get("task_uuid"),
         },

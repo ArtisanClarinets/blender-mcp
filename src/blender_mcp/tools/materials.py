@@ -6,7 +6,7 @@ Provides focused MCP tools for creating and managing Blender materials.
 
 import json
 import logging
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from mcp.server.fastmcp import Context
 
@@ -225,7 +225,7 @@ async def create_subsurface_material(
 ) -> str:
     """
     Create an advanced subsurface scattering material.
-    
+
     Parameters:
     - name: Material name
     - base_color: Base color [r, g, b]
@@ -234,7 +234,7 @@ async def create_subsurface_material(
     - subsurface: Subsurface strength
     - roughness: Surface roughness
     - subsurface_method: Scattering method
-    
+
     Returns:
     - JSON string with material creation result
     """
@@ -247,8 +247,9 @@ async def create_subsurface_material(
         "roughness": roughness,
         "subsurface_method": subsurface_method,
     }
-    
+
     return _send_material_command("create_subsurface_material", params)
+
 
 @telemetry_tool("create_volume_material")
 @mcp.tool()
@@ -263,7 +264,7 @@ async def create_volume_material(
 ) -> str:
     """
     Create a volume material for clouds, smoke, or fire.
-    
+
     Parameters:
     - name: Material name
     - density: Volume density
@@ -271,7 +272,7 @@ async def create_volume_material(
     - absorption_color: Absorption color
     - emission_color: Emission color
     - emission_strength: Emission strength
-    
+
     Returns:
     - JSON string with volume material creation result
     """
@@ -281,13 +282,14 @@ async def create_volume_material(
         "anisotropy": anisotropy,
         "emission_strength": emission_strength,
     }
-    
+
     if absorption_color:
         params["absorption_color"] = absorption_color
     if emission_color:
         params["emission_color"] = emission_color
-        
+
     return _send_material_command("create_volume_material", params)
+
 
 @telemetry_tool("create_layered_material")
 @mcp.tool()
@@ -300,13 +302,13 @@ async def create_layered_material(
 ) -> str:
     """
     Create a multi-layered material system.
-    
+
     Parameters:
     - name: Material name
     - base_material: Base material name
     - layers: List of layer definitions
     - blend_modes: Blend modes for each layer
-    
+
     Returns:
     - JSON string with layered material creation result
     """
@@ -315,11 +317,12 @@ async def create_layered_material(
         "base_material": base_material,
         "layers": layers,
     }
-    
+
     if blend_modes:
         params["blend_modes"] = blend_modes
-        
+
     return _send_material_command("create_layered_material", params)
+
 
 @telemetry_tool("create_hair_material")
 @mcp.tool()
@@ -336,7 +339,7 @@ async def create_hair_material(
 ) -> str:
     """
     Create a realistic hair material.
-    
+
     Parameters:
     - name: Material name
     - base_color: Hair color
@@ -346,7 +349,7 @@ async def create_hair_material(
     - ior: Index of refraction
     - melanin: Melanin concentration
     - melanin_redness: Red melanin concentration
-    
+
     Returns:
     - JSON string with hair material creation result
     """
@@ -360,5 +363,5 @@ async def create_hair_material(
         "melanin": melanin,
         "melanin_redness": melanin_redness,
     }
-    
+
     return _send_material_command("create_hair_material", params)

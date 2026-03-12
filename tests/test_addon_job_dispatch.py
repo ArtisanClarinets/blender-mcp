@@ -4,6 +4,8 @@ import types
 from pathlib import Path
 from unittest.mock import Mock, patch
 
+import pytest
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
@@ -165,6 +167,47 @@ def _dispatch_legacy_addon_command(
         return addon.BlenderMCPServer()._dispatch_command(command_type, params)
 
 
+def _load_legacy_addon_without_handlers():
+    fake_bpy_module = types.ModuleType("bpy")
+    fake_bpy_module.app = types.SimpleNamespace(
+        timers=types.SimpleNamespace(register=lambda func, first_interval=0.0: func())
+    )
+    fake_bpy_props = types.ModuleType("bpy.props")
+    for property_name in (
+        "StringProperty",
+        "IntProperty",
+        "BoolProperty",
+        "EnumProperty",
+        "PointerProperty",
+    ):
+        setattr(fake_bpy_props, property_name, lambda **_kwargs: None)
+    fake_bpy_types = types.ModuleType("bpy.types")
+    fake_bpy_types.Panel = object
+    fake_bpy_types.Operator = object
+    fake_bpy_types.PropertyGroup = object
+    fake_bpy_types.AddonPreferences = object
+    fake_bpy_module.props = fake_bpy_props
+    fake_bpy_module.types = fake_bpy_types
+
+    addon_module_name = "test_legacy_addon_jobs_no_handlers"
+    addon_module_path = PROJECT_ROOT / "addon.py"
+    spec = importlib.util.spec_from_file_location(addon_module_name, addon_module_path)
+    addon = importlib.util.module_from_spec(spec)
+
+    with patch.dict(
+        sys.modules,
+        {
+            "bpy": fake_bpy_module,
+            "bpy.props": fake_bpy_props,
+            "bpy.types": fake_bpy_types,
+            "requests": types.ModuleType("requests"),
+        },
+    ):
+        sys.modules.pop(addon_module_name, None)
+        spec.loader.exec_module(addon)
+        return addon
+
+
 def test_server_dispatch_routes_tripo3d_and_unified_jobs():
     jobs_hyper3d = types.SimpleNamespace(
         get_status=Mock(),
@@ -240,6 +283,38 @@ def test_server_dispatch_routes_tripo3d_and_unified_jobs():
     )
 
 
+def test_server_dispatch_get_job_uses_unified_provider_lookup_order():
+    jobs_hyper3d = types.SimpleNamespace(get_job=Mock(return_value=None))
+    jobs_hunyuan = types.SimpleNamespace(
+        get_job=Mock(
+            return_value={
+                "job_id": "job_hunyuan",
+                "provider": "hunyuan3d",
+                "status": "DONE",
+            }
+        )
+    )
+    jobs_tripo3d = types.SimpleNamespace(get_job=Mock(return_value=None))
+    server = _load_addon_server(
+        jobs_hyper3d=jobs_hyper3d,
+        jobs_hunyuan=jobs_hunyuan,
+        jobs_tripo3d=jobs_tripo3d,
+    )
+
+    result = server.BlenderMCPServer()._dispatch_command(
+        "get_job", {"job_id": "job_hunyuan"}
+    )
+
+    assert result == {
+        "job_id": "job_hunyuan",
+        "provider": "hunyuan3d",
+        "status": "DONE",
+    }
+    jobs_hyper3d.get_job.assert_called_once_with({"job_id": "job_hunyuan"})
+    jobs_hunyuan.get_job.assert_called_once_with({"job_id": "job_hunyuan"})
+    jobs_tripo3d.get_job.assert_not_called()
+
+
 def test_legacy_addon_dispatch_routes_tripo3d_and_unified_jobs_to_handlers():
     jobs_hyper3d = types.SimpleNamespace(
         create_job=Mock(), get_job=Mock(return_value=None), import_job_result=Mock()
@@ -307,3 +382,143 @@ def test_legacy_addon_dispatch_routes_tripo3d_and_unified_jobs_to_handlers():
         {"model_url": "memory://tripo3d/job_tripo.glb", "name": "Robot"}
     )
     jobs_tripo3d.create_job.assert_called_once_with({"text_prompt": "robot"})
+
+
+def test_legacy_addon_dispatch_get_job_uses_unified_provider_lookup_order():
+    jobs_hyper3d = types.SimpleNamespace(get_job=Mock(return_value=None))
+    jobs_hunyuan = types.SimpleNamespace(
+        get_job=Mock(
+            return_value={
+                "job_id": "job_hunyuan",
+                "provider": "hunyuan3d",
+                "status": "DONE",
+            }
+        )
+    )
+    jobs_tripo3d = types.SimpleNamespace(get_job=Mock(return_value=None))
+
+    result = _dispatch_legacy_addon_command(
+        "get_job",
+        {"job_id": "job_hunyuan"},
+        jobs_hyper3d=jobs_hyper3d,
+        jobs_hunyuan=jobs_hunyuan,
+        jobs_tripo3d=jobs_tripo3d,
+    )
+
+    assert result == {
+        "job_id": "job_hunyuan",
+        "provider": "hunyuan3d",
+        "status": "DONE",
+    }
+    jobs_hyper3d.get_job.assert_called_once_with({"job_id": "job_hunyuan"})
+    jobs_hunyuan.get_job.assert_called_once_with({"job_id": "job_hunyuan"})
+    jobs_tripo3d.get_job.assert_not_called()
+
+
+def test_legacy_addon_fallback_create_job_validates_missing_provider_inputs():
+    addon = _load_legacy_addon_without_handlers()
+    server = addon.BlenderMCPServer()
+
+    with pytest.raises(
+        ValueError,
+        match="text_prompt, input_image_paths, or input_image_urls is required",
+    ):
+        server._dispatch_command("create_job", {"provider": "hyper3d", "payload": {}})
+
+    with pytest.raises(ValueError, match="text_prompt or input_image_url is required"):
+        server._dispatch_command("create_job", {"provider": "hunyuan3d", "payload": {}})
+
+
+def test_legacy_addon_fallback_routes_provider_specific_hyper3d_commands():
+    addon = _load_legacy_addon_without_handlers()
+    addon.APIManager.get_hyper3d_config = staticmethod(
+        lambda: {"enabled": True, "api_key": "secret", "mode": "fal"}
+    )
+
+    server = addon.BlenderMCPServer()
+    status_result = server._dispatch_command("get_hyper3d_status", {})
+    generate_result = server._dispatch_command(
+        "generate_hyper3d_model_via_text", {"text_prompt": "robot"}
+    )
+    poll_result = server._dispatch_command(
+        "poll_rodin_job_status", {"request_id": generate_result["request_id"]}
+    )
+    import_result = server._dispatch_command(
+        "import_generated_asset",
+        {"name": "Robot", "request_id": generate_result["request_id"]},
+    )
+
+    assert status_result == {
+        "enabled": True,
+        "has_api_key": True,
+        "mode": "fal",
+        "message": "Hyper3D (fal) ready",
+        "api_available": True,
+        "modes": ["MAIN_SITE", "FAL_AI"],
+    }
+    assert generate_result["status"] == "IN_QUEUE"
+    assert poll_result["status"] == "COMPLETED"
+    assert poll_result["request_id"] == generate_result["request_id"]
+    assert import_result == {
+        "status": "success",
+        "provider": "hyper3d",
+        "name": "Robot",
+        "imported": True,
+        "imported_objects": ["Robot"],
+        "deferred_import": True,
+        "job_id": generate_result["job_id"],
+        "source": poll_result["model_url"],
+        "request_id": generate_result["request_id"],
+        "task_uuid": generate_result["job_id"],
+        "model_url": poll_result["model_url"],
+    }
+
+
+def test_legacy_addon_fallback_routes_provider_specific_hunyuan_commands():
+    addon = _load_legacy_addon_without_handlers()
+    addon.APIManager.get_hunyuan3d_config = staticmethod(
+        lambda: {
+            "enabled": True,
+            "mode": "local",
+            "api_key": "secret",
+            "local_path": "C:/models/hunyuan",
+        }
+    )
+
+    server = addon.BlenderMCPServer()
+    status_result = server._dispatch_command("get_hunyuan3d_status", {})
+    generate_result = server._dispatch_command(
+        "generate_hunyuan3d_model", {"input_image_url": "memory://reference.png"}
+    )
+    poll_result = server._dispatch_command(
+        "poll_hunyuan_job_status", {"job_id": generate_result["job_id"]}
+    )
+    import_result = server._dispatch_command(
+        "import_generated_asset_hunyuan",
+        {"name": "Vase", "zip_file_url": poll_result["zip_file_url"]},
+    )
+
+    assert status_result == {
+        "enabled": True,
+        "mode": "local",
+        "has_api_key": True,
+        "has_local_path": True,
+        "message": "Hunyuan3D (local) ready",
+        "api_available": True,
+    }
+    assert generate_result == {
+        "job_id": generate_result["job_id"],
+        "status": "RUN",
+        "message": "Generation job created",
+    }
+    assert poll_result["status"] == "DONE"
+    assert import_result == {
+        "status": "success",
+        "provider": "hunyuan3d",
+        "name": "Vase",
+        "imported": True,
+        "imported_objects": ["Vase"],
+        "deferred_import": True,
+        "source": poll_result["zip_file_url"],
+        "zip_file_url": poll_result["zip_file_url"],
+    }
