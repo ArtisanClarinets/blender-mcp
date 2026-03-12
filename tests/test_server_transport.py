@@ -6,6 +6,8 @@ import types
 from pathlib import Path
 from unittest.mock import Mock, patch
 
+import pytest
+
 
 class _DummyFastMCP:
     def __init__(self, *args, **kwargs):
@@ -66,7 +68,13 @@ def _load_server_module():
         return importlib.import_module("blender_mcp.server")
 
 
-def _load_addon_server(*, lighting_module=None, materials_module=None):
+def _load_addon_server(
+    *,
+    lighting_module=None,
+    materials_module=None,
+    camera_module=None,
+    composition_module=None,
+):
     fake_bpy = types.SimpleNamespace(
         app=types.SimpleNamespace(
             timers=types.SimpleNamespace(
@@ -76,6 +84,8 @@ def _load_addon_server(*, lighting_module=None, materials_module=None):
     )
     materials_module = materials_module or types.SimpleNamespace()
     lighting_module = lighting_module or types.SimpleNamespace()
+    camera_module = camera_module or types.SimpleNamespace()
+    composition_module = composition_module or types.SimpleNamespace()
     scene_observe = types.SimpleNamespace(
         observe_scene=Mock(),
         get_scene_hash=Mock(),
@@ -148,6 +158,8 @@ def _load_addon_server(*, lighting_module=None, materials_module=None):
     handlers_module = types.ModuleType("blender_mcp_addon.handlers")
     handlers_module.scene_observe = scene_observe
     handlers_module.scene_ops = scene_ops
+    handlers_module.camera = camera_module
+    handlers_module.composition = composition_module
     handlers_module.materials = materials_module
     handlers_module.lighting = lighting_module
     handlers_module.export_handler = export_handler
@@ -168,6 +180,8 @@ def _load_addon_server(*, lighting_module=None, materials_module=None):
             "blender_mcp_addon.handlers": handlers_module,
             "blender_mcp_addon.handlers.scene_observe": scene_observe,
             "blender_mcp_addon.handlers.scene_ops": scene_ops,
+            "blender_mcp_addon.handlers.camera": camera_module,
+            "blender_mcp_addon.handlers.composition": composition_module,
             "blender_mcp_addon.handlers.materials": materials_module,
             "blender_mcp_addon.handlers.lighting": lighting_module,
             "blender_mcp_addon.handlers.export_handler": export_handler,
@@ -191,7 +205,13 @@ def _load_addon_server(*, lighting_module=None, materials_module=None):
 
 
 def _dispatch_legacy_addon_command(
-    command_type, params, *, lighting_handlers=None, material_handlers=None
+    command_type,
+    params,
+    *,
+    lighting_handlers=None,
+    material_handlers=None,
+    camera_handlers=None,
+    composition_handlers=None,
 ):
     fake_bpy_module = types.ModuleType("bpy")
     fake_bpy_module.app = types.SimpleNamespace(
@@ -219,6 +239,8 @@ def _dispatch_legacy_addon_command(
 
     package_module = types.ModuleType("blender_mcp_addon")
     handlers_module = types.ModuleType("blender_mcp_addon.handlers")
+    handlers_module.camera = camera_handlers or types.SimpleNamespace()
+    handlers_module.composition = composition_handlers or types.SimpleNamespace()
     handlers_module.materials = material_handlers or types.SimpleNamespace()
     handlers_module.lighting = lighting_handlers or types.SimpleNamespace()
     package_module.handlers = handlers_module
@@ -284,6 +306,42 @@ def test_send_command_supports_legacy_result_envelope():
     assert result == {"material": "Legacy"}
 
 
+def test_send_command_preserves_open_circuit_message_before_socket_connect():
+    server = _load_server_module()
+    connection = server.BlenderConnection(host="localhost", port=9876)
+
+    with (
+        patch.object(connection, "connect", return_value=False),
+        patch.object(connection.circuit_breaker, "allow_request", return_value=False),
+    ):
+        with pytest.raises(ConnectionError, match=server.CIRCUIT_BREAKER_OPEN_MESSAGE):
+            connection.send_command("get_scene_info")
+
+
+def test_command_param_logging_summary_redacts_sensitive_values():
+    server = _load_server_module()
+
+    summary = server._summarize_command_params_for_logging(
+        {
+            "code": "print('secret')\n" * 30,
+            "input_image_paths": [
+                r"C:\\Users\\tester\\secret\\reference.png",
+                r"D:\\assets\\folder\\another.jpg",
+            ],
+            "image_data": "QUFBQ" * 40,
+            "note": "keep me visible",
+        }
+    )
+
+    assert summary["code"] == {"type": "code", "length": 480}
+    assert summary["input_image_paths"] == [
+        {"type": "path", "name": "reference.png"},
+        {"type": "path", "name": "another.jpg"},
+    ]
+    assert summary["image_data"] == {"type": "base64", "length": 200}
+    assert summary["note"] == "keep me visible"
+
+
 def test_addon_dispatch_routes_glass_material_command():
     fake_bpy = types.SimpleNamespace(
         app=types.SimpleNamespace(
@@ -295,6 +353,8 @@ def test_addon_dispatch_routes_glass_material_command():
     materials_module = types.SimpleNamespace(
         create_glass_material=Mock(return_value={"status": "success"})
     )
+    camera_module = types.SimpleNamespace()
+    composition_module = types.SimpleNamespace()
     lighting_module = types.SimpleNamespace()
     scene_observe = types.SimpleNamespace(
         observe_scene=Mock(),
@@ -368,6 +428,8 @@ def test_addon_dispatch_routes_glass_material_command():
     handlers_module = types.ModuleType("blender_mcp_addon.handlers")
     handlers_module.scene_observe = scene_observe
     handlers_module.scene_ops = scene_ops
+    handlers_module.camera = camera_module
+    handlers_module.composition = composition_module
     handlers_module.materials = materials_module
     handlers_module.lighting = lighting_module
     handlers_module.export_handler = export_handler
@@ -388,6 +450,8 @@ def test_addon_dispatch_routes_glass_material_command():
             "blender_mcp_addon.handlers": handlers_module,
             "blender_mcp_addon.handlers.scene_observe": scene_observe,
             "blender_mcp_addon.handlers.scene_ops": scene_ops,
+            "blender_mcp_addon.handlers.camera": camera_module,
+            "blender_mcp_addon.handlers.composition": composition_module,
             "blender_mcp_addon.handlers.materials": materials_module,
             "blender_mcp_addon.handlers.lighting": lighting_module,
             "blender_mcp_addon.handlers.export_handler": export_handler,
@@ -426,6 +490,8 @@ def test_addon_dispatch_routes_area_light_command():
         )
     )
     materials_module = types.SimpleNamespace()
+    camera_module = types.SimpleNamespace()
+    composition_module = types.SimpleNamespace()
     lighting_module = types.SimpleNamespace(
         create_area_light=Mock(return_value={"status": "success", "type": "area"})
     )
@@ -501,6 +567,8 @@ def test_addon_dispatch_routes_area_light_command():
     handlers_module = types.ModuleType("blender_mcp_addon.handlers")
     handlers_module.scene_observe = scene_observe
     handlers_module.scene_ops = scene_ops
+    handlers_module.camera = camera_module
+    handlers_module.composition = composition_module
     handlers_module.materials = materials_module
     handlers_module.lighting = lighting_module
     handlers_module.export_handler = export_handler
@@ -521,6 +589,8 @@ def test_addon_dispatch_routes_area_light_command():
             "blender_mcp_addon.handlers": handlers_module,
             "blender_mcp_addon.handlers.scene_observe": scene_observe,
             "blender_mcp_addon.handlers.scene_ops": scene_ops,
+            "blender_mcp_addon.handlers.camera": camera_module,
+            "blender_mcp_addon.handlers.composition": composition_module,
             "blender_mcp_addon.handlers.materials": materials_module,
             "blender_mcp_addon.handlers.lighting": lighting_module,
             "blender_mcp_addon.handlers.export_handler": export_handler,
@@ -586,6 +656,136 @@ def test_addon_dispatch_routes_additional_lighting_commands():
     )
     lighting_module.list_lights.assert_called_once_with()
     lighting_module.clear_lights.assert_called_once_with()
+
+
+def test_addon_dispatch_routes_camera_commands():
+    camera_module = types.SimpleNamespace(
+        create_composition_camera=Mock(
+            return_value={"status": "success", "name": "HeroCam"}
+        ),
+        apply_camera_preset=Mock(
+            return_value={"status": "success", "preset": "portrait"}
+        ),
+        list_cameras=Mock(return_value={"count": 1, "active_camera": "HeroCam"}),
+    )
+    server = _load_addon_server(camera_module=camera_module)
+
+    create_result = server.BlenderMCPServer()._dispatch_command(
+        "create_composition_camera", {"name": "HeroCam"}
+    )
+    preset_result = server.BlenderMCPServer()._dispatch_command(
+        "apply_camera_preset", {"camera_name": "HeroCam", "preset": "portrait"}
+    )
+    list_result = server.BlenderMCPServer()._dispatch_command("list_cameras", {})
+
+    assert create_result == {"status": "success", "name": "HeroCam"}
+    assert preset_result == {"status": "success", "preset": "portrait"}
+    assert list_result == {"count": 1, "active_camera": "HeroCam"}
+    camera_module.create_composition_camera.assert_called_once_with({"name": "HeroCam"})
+    camera_module.apply_camera_preset.assert_called_once_with(
+        {"camera_name": "HeroCam", "preset": "portrait"}
+    )
+    camera_module.list_cameras.assert_called_once_with()
+
+
+def test_addon_dispatch_routes_composition_commands():
+    composition_module = types.SimpleNamespace(
+        compose_product_shot=Mock(
+            return_value={"status": "success", "preset": "product_shot"}
+        ),
+        compose_isometric_scene=Mock(
+            return_value={"status": "success", "preset": "isometric"}
+        ),
+        compose_character_scene=Mock(
+            return_value={"status": "success", "preset": "character"}
+        ),
+        compose_automotive_shot=Mock(
+            return_value={"status": "success", "preset": "automotive"}
+        ),
+        compose_food_shot=Mock(return_value={"status": "success", "preset": "food"}),
+        compose_jewelry_shot=Mock(
+            return_value={"status": "success", "preset": "jewelry"}
+        ),
+        compose_architectural_shot=Mock(
+            return_value={"status": "success", "preset": "architectural"}
+        ),
+        compose_studio_setup=Mock(
+            return_value={"status": "success", "preset": "studio"}
+        ),
+        clear_scene=Mock(return_value={"status": "success", "removed_count": 2}),
+        setup_render_settings=Mock(
+            return_value={"status": "success", "engine": "CYCLES"}
+        ),
+    )
+    server = _load_addon_server(composition_module=composition_module)
+
+    product_result = server.BlenderMCPServer()._dispatch_command(
+        "compose_product_shot", {"product_name": "Bottle"}
+    )
+    isometric_result = server.BlenderMCPServer()._dispatch_command(
+        "compose_isometric_scene", {"grid_size": 12.0}
+    )
+    character_result = server.BlenderMCPServer()._dispatch_command(
+        "compose_character_scene", {"character_name": "Hero", "environment": "night"}
+    )
+    automotive_result = server.BlenderMCPServer()._dispatch_command(
+        "compose_automotive_shot", {"car_name": "Coupe", "angle": "side"}
+    )
+    food_result = server.BlenderMCPServer()._dispatch_command(
+        "compose_food_shot", {"style": "angled"}
+    )
+    jewelry_result = server.BlenderMCPServer()._dispatch_command(
+        "compose_jewelry_shot", {"style": "catalog", "reflections": False}
+    )
+    architectural_result = server.BlenderMCPServer()._dispatch_command(
+        "compose_architectural_shot", {"interior": True}
+    )
+    studio_result = server.BlenderMCPServer()._dispatch_command(
+        "compose_studio_setup", {"subject_type": "watch", "mood": "moody"}
+    )
+    clear_result = server.BlenderMCPServer()._dispatch_command(
+        "clear_scene", {"keep_camera": True}
+    )
+    render_result = server.BlenderMCPServer()._dispatch_command(
+        "setup_render_settings", {"engine": "CYCLES", "samples": 128}
+    )
+
+    assert product_result == {"status": "success", "preset": "product_shot"}
+    assert isometric_result == {"status": "success", "preset": "isometric"}
+    assert character_result == {"status": "success", "preset": "character"}
+    assert automotive_result == {"status": "success", "preset": "automotive"}
+    assert food_result == {"status": "success", "preset": "food"}
+    assert jewelry_result == {"status": "success", "preset": "jewelry"}
+    assert architectural_result == {"status": "success", "preset": "architectural"}
+    assert studio_result == {"status": "success", "preset": "studio"}
+    assert clear_result == {"status": "success", "removed_count": 2}
+    assert render_result == {"status": "success", "engine": "CYCLES"}
+    composition_module.compose_product_shot.assert_called_once_with(
+        {"product_name": "Bottle"}
+    )
+    composition_module.compose_isometric_scene.assert_called_once_with(
+        {"grid_size": 12.0}
+    )
+    composition_module.compose_character_scene.assert_called_once_with(
+        {"character_name": "Hero", "environment": "night"}
+    )
+    composition_module.compose_automotive_shot.assert_called_once_with(
+        {"car_name": "Coupe", "angle": "side"}
+    )
+    composition_module.compose_food_shot.assert_called_once_with({"style": "angled"})
+    composition_module.compose_jewelry_shot.assert_called_once_with(
+        {"style": "catalog", "reflections": False}
+    )
+    composition_module.compose_architectural_shot.assert_called_once_with(
+        {"interior": True}
+    )
+    composition_module.compose_studio_setup.assert_called_once_with(
+        {"subject_type": "watch", "mood": "moody"}
+    )
+    composition_module.clear_scene.assert_called_once_with({"keep_camera": True})
+    composition_module.setup_render_settings.assert_called_once_with(
+        {"engine": "CYCLES", "samples": 128}
+    )
 
 
 def test_legacy_addon_dispatch_routes_material_command_to_modular_handlers():
@@ -748,3 +948,213 @@ def test_legacy_addon_dispatch_routes_additional_lighting_commands_to_modular_ha
     )
     lighting_handlers.list_lights.assert_called_once_with()
     lighting_handlers.clear_lights.assert_called_once_with()
+
+
+def test_legacy_addon_dispatch_routes_all_camera_commands_to_modular_handlers():
+    camera_handlers = types.SimpleNamespace(
+        create_composition_camera=Mock(
+            return_value={"status": "success", "name": "Hero", "composition": "center"}
+        ),
+        create_isometric_camera=Mock(return_value={"status": "success", "name": "Iso"}),
+        set_camera_depth_of_field=Mock(
+            return_value={"status": "success", "camera": "Hero", "lens": 85.0}
+        ),
+        apply_camera_preset=Mock(
+            return_value={"status": "success", "camera": "Hero", "preset": "portrait"}
+        ),
+        set_active_camera=Mock(
+            return_value={"status": "success", "active_camera": "Iso"}
+        ),
+        list_cameras=Mock(
+            return_value={"cameras": [{"name": "Hero"}, {"name": "Iso"}], "count": 2}
+        ),
+        frame_camera_to_selection=Mock(
+            return_value={"status": "success", "camera": "Iso"}
+        ),
+    )
+
+    composition_result = _dispatch_legacy_addon_command(
+        "create_composition_camera",
+        {"name": "Hero", "composition": "center"},
+        camera_handlers=camera_handlers,
+    )
+    create_result = _dispatch_legacy_addon_command(
+        "create_isometric_camera",
+        {"name": "Iso"},
+        camera_handlers=camera_handlers,
+    )
+    dof_result = _dispatch_legacy_addon_command(
+        "set_camera_depth_of_field",
+        {"camera_name": "Hero", "focus_distance": 4.0},
+        camera_handlers=camera_handlers,
+    )
+    preset_result = _dispatch_legacy_addon_command(
+        "apply_camera_preset",
+        {"camera_name": "Hero", "preset": "portrait"},
+        camera_handlers=camera_handlers,
+    )
+    active_result = _dispatch_legacy_addon_command(
+        "set_active_camera",
+        {"camera_name": "Iso"},
+        camera_handlers=camera_handlers,
+    )
+    list_result = _dispatch_legacy_addon_command(
+        "list_cameras", {}, camera_handlers=camera_handlers
+    )
+    frame_result = _dispatch_legacy_addon_command(
+        "frame_camera_to_selection",
+        {"camera_name": "Iso", "margin": 1.2},
+        camera_handlers=camera_handlers,
+    )
+
+    assert composition_result == {
+        "status": "success",
+        "name": "Hero",
+        "composition": "center",
+    }
+    assert create_result == {"status": "success", "name": "Iso"}
+    assert dof_result == {"status": "success", "camera": "Hero", "lens": 85.0}
+    assert preset_result == {
+        "status": "success",
+        "camera": "Hero",
+        "preset": "portrait",
+    }
+    assert active_result == {"status": "success", "active_camera": "Iso"}
+    assert list_result == {"cameras": [{"name": "Hero"}, {"name": "Iso"}], "count": 2}
+    assert frame_result == {"status": "success", "camera": "Iso"}
+    camera_handlers.create_composition_camera.assert_called_once_with(
+        {"name": "Hero", "composition": "center"}
+    )
+    camera_handlers.create_isometric_camera.assert_called_once_with({"name": "Iso"})
+    camera_handlers.set_camera_depth_of_field.assert_called_once_with(
+        {"camera_name": "Hero", "focus_distance": 4.0}
+    )
+    camera_handlers.apply_camera_preset.assert_called_once_with(
+        {"camera_name": "Hero", "preset": "portrait"}
+    )
+    camera_handlers.set_active_camera.assert_called_once_with({"camera_name": "Iso"})
+    camera_handlers.list_cameras.assert_called_once_with()
+    camera_handlers.frame_camera_to_selection.assert_called_once_with(
+        {"camera_name": "Iso", "margin": 1.2}
+    )
+
+
+def test_legacy_addon_dispatch_routes_composition_commands_to_modular_handlers():
+    composition_handlers = types.SimpleNamespace(
+        compose_product_shot=Mock(
+            return_value={"status": "success", "preset": "product_shot"}
+        ),
+        compose_isometric_scene=Mock(
+            return_value={"status": "success", "preset": "isometric"}
+        ),
+        compose_character_scene=Mock(
+            return_value={"status": "success", "preset": "character"}
+        ),
+        compose_automotive_shot=Mock(
+            return_value={"status": "success", "preset": "automotive"}
+        ),
+        compose_food_shot=Mock(return_value={"status": "success", "preset": "food"}),
+        compose_jewelry_shot=Mock(
+            return_value={"status": "success", "preset": "jewelry"}
+        ),
+        compose_architectural_shot=Mock(
+            return_value={"status": "success", "preset": "architectural"}
+        ),
+        compose_studio_setup=Mock(
+            return_value={"status": "success", "preset": "studio"}
+        ),
+        clear_scene=Mock(return_value={"status": "success", "removed_count": 1}),
+        setup_render_settings=Mock(
+            return_value={"status": "success", "engine": "EEVEE"}
+        ),
+    )
+
+    product_result = _dispatch_legacy_addon_command(
+        "compose_product_shot",
+        {"product_name": "Bottle", "background": "white"},
+        composition_handlers=composition_handlers,
+    )
+    isometric_result = _dispatch_legacy_addon_command(
+        "compose_isometric_scene",
+        {"grid_size": 14.0, "floor": False},
+        composition_handlers=composition_handlers,
+    )
+    character_result = _dispatch_legacy_addon_command(
+        "compose_character_scene",
+        {"character_name": "Hero", "environment": "night"},
+        composition_handlers=composition_handlers,
+    )
+    automotive_result = _dispatch_legacy_addon_command(
+        "compose_automotive_shot",
+        {"car_name": "Coupe", "angle": "side"},
+        composition_handlers=composition_handlers,
+    )
+    food_result = _dispatch_legacy_addon_command(
+        "compose_food_shot",
+        {"style": "angled"},
+        composition_handlers=composition_handlers,
+    )
+    jewelry_result = _dispatch_legacy_addon_command(
+        "compose_jewelry_shot",
+        {"style": "catalog", "reflections": False},
+        composition_handlers=composition_handlers,
+    )
+    architectural_result = _dispatch_legacy_addon_command(
+        "compose_architectural_shot",
+        {"interior": True, "natural_light": False},
+        composition_handlers=composition_handlers,
+    )
+    studio_result = _dispatch_legacy_addon_command(
+        "compose_studio_setup",
+        {"subject_type": "watch", "mood": "moody"},
+        composition_handlers=composition_handlers,
+    )
+    clear_result = _dispatch_legacy_addon_command(
+        "clear_scene",
+        {"keep_camera": True, "keep_lights": False},
+        composition_handlers=composition_handlers,
+    )
+    render_result = _dispatch_legacy_addon_command(
+        "setup_render_settings",
+        {"engine": "EEVEE", "samples": 64},
+        composition_handlers=composition_handlers,
+    )
+
+    assert product_result == {"status": "success", "preset": "product_shot"}
+    assert isometric_result == {"status": "success", "preset": "isometric"}
+    assert character_result == {"status": "success", "preset": "character"}
+    assert automotive_result == {"status": "success", "preset": "automotive"}
+    assert food_result == {"status": "success", "preset": "food"}
+    assert jewelry_result == {"status": "success", "preset": "jewelry"}
+    assert architectural_result == {"status": "success", "preset": "architectural"}
+    assert studio_result == {"status": "success", "preset": "studio"}
+    assert clear_result == {"status": "success", "removed_count": 1}
+    assert render_result == {"status": "success", "engine": "EEVEE"}
+    composition_handlers.compose_product_shot.assert_called_once_with(
+        {"product_name": "Bottle", "background": "white"}
+    )
+    composition_handlers.compose_isometric_scene.assert_called_once_with(
+        {"grid_size": 14.0, "floor": False}
+    )
+    composition_handlers.compose_character_scene.assert_called_once_with(
+        {"character_name": "Hero", "environment": "night"}
+    )
+    composition_handlers.compose_automotive_shot.assert_called_once_with(
+        {"car_name": "Coupe", "angle": "side"}
+    )
+    composition_handlers.compose_food_shot.assert_called_once_with({"style": "angled"})
+    composition_handlers.compose_jewelry_shot.assert_called_once_with(
+        {"style": "catalog", "reflections": False}
+    )
+    composition_handlers.compose_architectural_shot.assert_called_once_with(
+        {"interior": True, "natural_light": False}
+    )
+    composition_handlers.compose_studio_setup.assert_called_once_with(
+        {"subject_type": "watch", "mood": "moody"}
+    )
+    composition_handlers.clear_scene.assert_called_once_with(
+        {"keep_camera": True, "keep_lights": False}
+    )
+    composition_handlers.setup_render_settings.assert_called_once_with(
+        {"engine": "EEVEE", "samples": 64}
+    )

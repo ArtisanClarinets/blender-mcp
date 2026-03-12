@@ -15,6 +15,8 @@ from . import protocol
 from .handlers import (
     scene_observe,
     scene_ops,
+    camera,
+    composition,
     materials,
     lighting,
     export_handler,
@@ -208,6 +210,20 @@ class BlenderMCPServer:
             return scene_ops.create_camera(params)
         elif command_type == "create_light":
             return scene_ops.create_light(params)
+        elif command_type == "create_composition_camera":
+            return camera.create_composition_camera(params)
+        elif command_type == "create_isometric_camera":
+            return camera.create_isometric_camera(params)
+        elif command_type == "set_camera_depth_of_field":
+            return camera.set_camera_depth_of_field(params)
+        elif command_type == "apply_camera_preset":
+            return camera.apply_camera_preset(params)
+        elif command_type == "set_active_camera":
+            return camera.set_active_camera(params)
+        elif command_type == "list_cameras":
+            return camera.list_cameras()
+        elif command_type == "frame_camera_to_selection":
+            return camera.frame_camera_to_selection(params)
         elif command_type == "set_transform":
             return scene_ops.set_transform(params)
         elif command_type == "select_objects":
@@ -252,6 +268,26 @@ class BlenderMCPServer:
             return lighting.clear_lights()
         elif command_type == "list_lights":
             return lighting.list_lights()
+        elif command_type == "compose_product_shot":
+            return composition.compose_product_shot(params)
+        elif command_type == "compose_isometric_scene":
+            return composition.compose_isometric_scene(params)
+        elif command_type == "compose_character_scene":
+            return composition.compose_character_scene(params)
+        elif command_type == "compose_automotive_shot":
+            return composition.compose_automotive_shot(params)
+        elif command_type == "compose_food_shot":
+            return composition.compose_food_shot(params)
+        elif command_type == "compose_jewelry_shot":
+            return composition.compose_jewelry_shot(params)
+        elif command_type == "compose_architectural_shot":
+            return composition.compose_architectural_shot(params)
+        elif command_type == "compose_studio_setup":
+            return composition.compose_studio_setup(params)
+        elif command_type == "clear_scene":
+            return composition.clear_scene(params)
+        elif command_type == "setup_render_settings":
+            return composition.setup_render_settings(params)
         elif command_type == "set_world_hdri":
             return scene_ops.set_world_hdri(params)
         elif command_type == "execute_blender_code":

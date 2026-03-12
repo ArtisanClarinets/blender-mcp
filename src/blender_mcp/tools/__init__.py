@@ -13,4 +13,6 @@ __all__ = [
     "jobs",
     "materials",
     "lighting",
+    "camera",
+    "composition",
 ]

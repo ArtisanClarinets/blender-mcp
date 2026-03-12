@@ -18,6 +18,7 @@ import bpy.props
 import threading
 import socket
 import json
+import math
 import traceback
 import uuid
 import hashlib
@@ -2364,6 +2365,823 @@ def _dispatch_lighting_command(command_type, params):
     raise ValueError(f"Unknown lighting command type: {command_type}")
 
 
+def _camera_look_at_rotation(location, target):
+    try:
+        import mathutils
+
+        direction = mathutils.Vector(target) - mathutils.Vector(location)
+        return list(direction.to_track_quat("-Z", "Y").to_euler())
+    except ImportError:
+        import math
+
+        dx = target[0] - location[0]
+        dy = target[1] - location[1]
+        dz = target[2] - location[2]
+        horizontal_distance = math.sqrt((dx * dx) + (dy * dy))
+        pitch = math.atan2(dz, max(horizontal_distance, 1e-6))
+        yaw = math.atan2(dx, -dy)
+        return [pitch, 0.0, yaw]
+
+
+def _fallback_get_existing_camera(name):
+    camera_object = resolve_id(name)
+    if camera_object is None or getattr(camera_object, "type", None) != "CAMERA":
+        return None
+    return camera_object
+
+
+def _fallback_create_composition_camera(params):
+    composition_offsets = {
+        "center": [0.0, 0.0, 0.0],
+        "rule_of_thirds": [0.33, 0.0, 0.2],
+        "golden_ratio": [0.38, 0.0, 0.24],
+        "diagonal": [0.45, 0.0, 0.45],
+        "frame": [0.6, 0.0, 0.0],
+    }
+    composition = str(params.get("composition", "center")).lower()
+    if composition not in composition_offsets:
+        raise ValueError(f"Unsupported composition: {composition}")
+
+    location = list(params.get("location", [0.0, -6.0, 3.0]))
+    target = list(params.get("target", [0.0, 0.0, 1.0]))
+    offset = composition_offsets[composition]
+    framed_target = [target[index] + offset[index] for index in range(3)]
+    name = str(params.get("name", "Camera"))
+    focal_length = float(params.get("focal_length", 50.0))
+    camera_object = _fallback_get_existing_camera(name)
+    if camera_object is None:
+        result = create_camera(
+            {
+                "name": name,
+                "lens": focal_length,
+                "location": location,
+                "look_at": framed_target,
+            }
+        )
+        camera_object = resolve_id(result["name"])
+    else:
+        camera_object.location = location
+        camera_object.data.type = "PERSP"
+        camera_object.data.lens = focal_length
+        camera_object.rotation_euler = _camera_look_at_rotation(location, framed_target)
+
+    return {
+        "status": "success",
+        "name": camera_object.name,
+        "composition": composition,
+        "lens": camera_object.data.lens,
+    }
+
+
+def _fallback_create_isometric_camera(params):
+    import math
+
+    name = str(params.get("name", "Isometric"))
+    camera_object = _fallback_get_existing_camera(name)
+    if camera_object is None:
+        result = create_camera(
+            {
+                "name": name,
+                "lens": 50.0,
+                "location": [10.0, -10.0, 10.0],
+            }
+        )
+        camera_object = resolve_id(result["name"])
+
+    camera_object.data.type = "ORTHO"
+    camera_object.data.ortho_scale = float(params.get("ortho_scale", 10.0))
+    camera_object.location = [10.0, -10.0, 10.0]
+    camera_object.rotation_euler = [
+        math.radians(float(params.get("angle", 35.264))),
+        0.0,
+        math.radians(45.0),
+    ]
+    return {
+        "status": "success",
+        "name": camera_object.name,
+        "type": "orthographic",
+        "ortho_scale": camera_object.data.ortho_scale,
+        "angle": float(params.get("angle", 35.264)),
+    }
+
+
+def _fallback_get_camera_object(camera_name):
+    camera_object = resolve_id(camera_name)
+    if camera_object is None or getattr(camera_object, "type", None) != "CAMERA":
+        raise ValueError(f"Camera not found: {camera_name}")
+    return camera_object
+
+
+def _fallback_set_camera_depth_of_field(params):
+    camera_name = params.get("camera_name")
+    if not camera_name:
+        raise ValueError("camera_name is required")
+
+    camera_object = _fallback_get_camera_object(camera_name)
+    camera_object.data.dof.use_dof = True
+    camera_object.data.dof.focus_distance = float(params.get("focus_distance", 10.0))
+    camera_object.data.dof.aperture_fstop = float(params.get("aperture", 5.6))
+    if params.get("focal_length") is not None:
+        camera_object.data.lens = float(params["focal_length"])
+
+    return {
+        "status": "success",
+        "camera": camera_object.name,
+        "focus_distance": camera_object.data.dof.focus_distance,
+        "aperture": camera_object.data.dof.aperture_fstop,
+        "lens": camera_object.data.lens,
+    }
+
+
+def _fallback_apply_camera_preset(params):
+    preset_map = {
+        "portrait": {"lens": 85.0, "aperture": 2.8},
+        "landscape": {"lens": 35.0, "aperture": 11.0},
+        "macro": {"lens": 100.0, "aperture": 16.0},
+        "cinematic": {"lens": 50.0, "aperture": 2.0},
+        "action": {"lens": 24.0, "aperture": 5.6},
+        "telephoto": {"lens": 135.0, "aperture": 4.0},
+        "product": {"lens": 50.0, "aperture": 8.0},
+    }
+    camera_name = params.get("camera_name")
+    preset = str(params.get("preset", "")).lower()
+    if not camera_name:
+        raise ValueError("camera_name is required")
+    if preset not in preset_map:
+        raise ValueError(f"Unsupported camera preset: {preset}")
+
+    camera_object = _fallback_get_camera_object(camera_name)
+    preset_settings = preset_map[preset]
+    camera_object.data.lens = preset_settings["lens"]
+    camera_object.data.dof.use_dof = True
+    camera_object.data.dof.aperture_fstop = preset_settings["aperture"]
+    return {
+        "status": "success",
+        "camera": camera_object.name,
+        "preset": preset,
+        "lens": camera_object.data.lens,
+        "aperture": camera_object.data.dof.aperture_fstop,
+    }
+
+
+def _fallback_set_active_camera(params):
+    camera_name = params.get("camera_name")
+    if not camera_name:
+        raise ValueError("camera_name is required")
+    camera_object = _fallback_get_camera_object(camera_name)
+    bpy.context.scene.camera = camera_object
+    return {"status": "success", "active_camera": camera_object.name}
+
+
+def _fallback_list_cameras():
+    active_camera = getattr(bpy.context.scene, "camera", None)
+    cameras = []
+    for obj in getattr(bpy.context.scene, "objects", []):
+        if getattr(obj, "type", None) != "CAMERA":
+            continue
+        cameras.append(
+            {
+                "name": obj.name,
+                "type": getattr(obj.data, "type", "PERSP"),
+                "lens": float(getattr(obj.data, "lens", 50.0)),
+                "location": list(getattr(obj, "location", [0.0, 0.0, 0.0])),
+                "rotation": list(getattr(obj, "rotation_euler", [0.0, 0.0, 0.0])),
+                "is_active": active_camera is obj,
+                "focus_distance": float(getattr(obj.data.dof, "focus_distance", 0.0)),
+            }
+        )
+    return {
+        "cameras": cameras,
+        "count": len(cameras),
+        "active_camera": getattr(active_camera, "name", None),
+    }
+
+
+def _fallback_frame_camera_to_selection(params):
+    camera_name = params.get("camera_name")
+    if not camera_name:
+        raise ValueError("camera_name is required")
+    margin = float(params.get("margin", 1.1))
+    if margin <= 0.0:
+        raise ValueError("margin must be greater than 0")
+
+    selected_objects = list(getattr(bpy.context, "selected_objects", []))
+    if not selected_objects:
+        raise ValueError("No selected objects to frame")
+
+    def _coerce_point3(value):
+        try:
+            components = list(value)
+        except TypeError:
+            return None
+
+        if len(components) < 3:
+            return None
+
+        return [float(components[index]) for index in range(3)]
+
+    def _transform_bound_box_corner(matrix_world, corner):
+        if matrix_world is None:
+            return None
+
+        for candidate in (corner, tuple(corner)):
+            try:
+                transformed = matrix_world @ candidate
+            except Exception:
+                continue
+
+            point = _coerce_point3(transformed)
+            if point is not None:
+                return point
+
+        transform_point = getattr(matrix_world, "transform_point", None)
+        if callable(transform_point):
+            point = _coerce_point3(transform_point(corner))
+            if point is not None:
+                return point
+
+        return None
+
+    def _object_bounds(obj):
+        bound_box = getattr(obj, "bound_box", None)
+        if bound_box is None:
+            return None
+
+        world_points = []
+        for corner in bound_box:
+            point = _coerce_point3(corner)
+            if point is None:
+                return None
+
+            transformed = _transform_bound_box_corner(
+                getattr(obj, "matrix_world", None), point
+            )
+            if transformed is None:
+                return None
+            world_points.append(transformed)
+
+        if not world_points:
+            return None
+
+        min_corner = [min(point[index] for point in world_points) for index in range(3)]
+        max_corner = [max(point[index] for point in world_points) for index in range(3)]
+        center = [(min_corner[index] + max_corner[index]) / 2.0 for index in range(3)]
+        size = [max_corner[index] - min_corner[index] for index in range(3)]
+        return {"center": center, "size": size}
+
+    min_corner = [float("inf"), float("inf"), float("inf")]
+    max_corner = [float("-inf"), float("-inf"), float("-inf")]
+    for obj in selected_objects:
+        object_bounds = _object_bounds(obj)
+        if object_bounds is not None:
+            center = object_bounds["center"]
+            half_size = [component / 2.0 for component in object_bounds["size"]]
+        else:
+            center = [
+                float(value) for value in getattr(obj, "location", [0.0, 0.0, 0.0])
+            ]
+            half_size = [
+                float(value) / 2.0
+                for value in getattr(obj, "dimensions", [0.0, 0.0, 0.0])
+            ]
+        for index in range(3):
+            min_corner[index] = min(min_corner[index], center[index] - half_size[index])
+            max_corner[index] = max(max_corner[index], center[index] + half_size[index])
+
+    center = [(min_corner[index] + max_corner[index]) / 2.0 for index in range(3)]
+    size = [max_corner[index] - min_corner[index] for index in range(3)]
+    max_dimension = max(max(size), 0.5)
+    framing_distance = max_dimension * margin * 2.0
+
+    camera_object = _fallback_get_camera_object(camera_name)
+    camera_object.location = [
+        center[0],
+        center[1] - framing_distance,
+        center[2] + (framing_distance * 0.5),
+    ]
+    camera_object.rotation_euler = _camera_look_at_rotation(
+        camera_object.location, center
+    )
+    if getattr(camera_object.data, "type", "PERSP") == "ORTHO":
+        camera_object.data.ortho_scale = max_dimension * margin
+
+    return {
+        "status": "success",
+        "camera": camera_object.name,
+        "center": center,
+        "size": size,
+        "margin": margin,
+    }
+
+
+def _camera_fallback_handlers():
+    class _Handlers:
+        create_composition_camera = staticmethod(_fallback_create_composition_camera)
+        create_isometric_camera = staticmethod(_fallback_create_isometric_camera)
+        set_camera_depth_of_field = staticmethod(_fallback_set_camera_depth_of_field)
+        apply_camera_preset = staticmethod(_fallback_apply_camera_preset)
+        set_active_camera = staticmethod(_fallback_set_active_camera)
+        list_cameras = staticmethod(_fallback_list_cameras)
+        frame_camera_to_selection = staticmethod(_fallback_frame_camera_to_selection)
+
+    return _Handlers
+
+
+def _dispatch_camera_command(command_type, params):
+    """Dispatch camera commands through modular handlers or local fallback."""
+    try:
+        from blender_mcp_addon.handlers import camera as camera_handlers
+    except ImportError:
+        camera_handlers = _camera_fallback_handlers()
+
+    if command_type == "create_composition_camera":
+        return camera_handlers.create_composition_camera(params)
+    elif command_type == "create_isometric_camera":
+        return camera_handlers.create_isometric_camera(params)
+    elif command_type == "set_camera_depth_of_field":
+        return camera_handlers.set_camera_depth_of_field(params)
+    elif command_type == "apply_camera_preset":
+        return camera_handlers.apply_camera_preset(params)
+    elif command_type == "set_active_camera":
+        return camera_handlers.set_active_camera(params)
+    elif command_type == "list_cameras":
+        return camera_handlers.list_cameras()
+    elif command_type == "frame_camera_to_selection":
+        return camera_handlers.frame_camera_to_selection(params)
+
+    raise ValueError(f"Unknown camera command type: {command_type}")
+
+
+_COMPOSITION_BACKGROUND_COLORS = {
+    "white": [1.0, 1.0, 1.0],
+    "black": [0.02, 0.02, 0.02],
+    "gradient": [0.82, 0.86, 0.92],
+    "neutral": [0.5, 0.5, 0.5],
+}
+
+
+def _fallback_get_scene():
+    scene = getattr(bpy.context, "scene", None)
+    if scene is None:
+        raise ValueError("No active scene available")
+    return scene
+
+
+def _fallback_ensure_scene_world(scene):
+    world = getattr(scene, "world", None)
+    if world is not None:
+        return world
+
+    worlds = getattr(getattr(bpy.data, "worlds", None), "new", None)
+    if callable(worlds):
+        scene.world = bpy.data.worlds.new(name="BlenderMCP World")
+        return scene.world
+
+    return None
+
+
+def _fallback_set_scene_background(scene, background):
+    normalized_background = str(background or "white").lower()
+    if normalized_background not in set(_COMPOSITION_BACKGROUND_COLORS) | {
+        "transparent"
+    }:
+        raise ValueError(f"Unsupported product background: {normalized_background}")
+
+    if normalized_background == "transparent":
+        scene.render.film_transparent = True
+        normalized_background = "white"
+    else:
+        scene.render.film_transparent = False
+
+    world = _fallback_ensure_scene_world(scene)
+    color = _COMPOSITION_BACKGROUND_COLORS.get(
+        normalized_background, _COMPOSITION_BACKGROUND_COLORS["neutral"]
+    )
+    if world is not None and hasattr(world, "color"):
+        world.color = list(color)
+
+    return str(background or "white").lower()
+
+
+def _fallback_ensure_camera_object(name):
+    camera_object = resolve_id(name)
+    if camera_object is not None:
+        if getattr(camera_object, "type", None) != "CAMERA":
+            raise ValueError(f"Object exists and is not a camera: {name}")
+        return camera_object
+
+    result = create_camera({"name": name, "lens": 50.0, "location": [0.0, 0.0, 0.0]})
+    camera_object = resolve_id(result["name"])
+    if camera_object is None:
+        raise ValueError(f"Failed to create camera: {name}")
+    return camera_object
+
+
+def _fallback_apply_camera_pose(camera_object, location, rotation):
+    camera_object.location = [float(component) for component in location]
+    camera_object.rotation_euler = [float(component) for component in rotation]
+
+
+def _fallback_composition_result(preset, camera_object, extra):
+    result = {
+        "status": "success",
+        "preset": preset,
+        "camera": camera_object.name,
+        "camera_type": getattr(camera_object.data, "type", "PERSP"),
+        "location": list(getattr(camera_object, "location", [0.0, 0.0, 0.0])),
+    }
+    result.update(extra)
+    return result
+
+
+def _fallback_compose_product_shot(params):
+    scene = _fallback_get_scene()
+    product_name = str(params.get("product_name", "Product"))
+    style = str(params.get("style", "clean")).lower()
+    if style not in {"clean", "lifestyle", "dramatic", "gradient"}:
+        raise ValueError(f"Unsupported product style: {style}")
+
+    background = _fallback_set_scene_background(
+        scene, params.get("background", "white")
+    )
+    camera_object = _fallback_ensure_camera_object(f"{product_name} Camera")
+    _fallback_apply_camera_pose(
+        camera_object,
+        [0.0, -4.5, 2.1],
+        [math.radians(68.0), 0.0, 0.0],
+    )
+    camera_object.data.type = "PERSP"
+    camera_object.data.lens = 60.0 if style == "dramatic" else 85.0
+    scene.camera = camera_object
+    return _fallback_composition_result(
+        "product_shot",
+        camera_object,
+        {
+            "product_name": product_name,
+            "style": style,
+            "background": background,
+            "lens": camera_object.data.lens,
+        },
+    )
+
+
+def _fallback_compose_isometric_scene(params):
+    scene = _fallback_get_scene()
+    grid_size = float(params.get("grid_size", 10.0))
+    if grid_size <= 0.0:
+        raise ValueError("grid_size must be greater than 0")
+
+    camera_object = _fallback_ensure_camera_object("Isometric Camera")
+    camera_object.data.type = "ORTHO"
+    camera_object.data.ortho_scale = grid_size
+    _fallback_apply_camera_pose(
+        camera_object,
+        [grid_size, -grid_size, grid_size],
+        [math.radians(35.264), 0.0, math.radians(45.0)],
+    )
+    scene.camera = camera_object
+    return _fallback_composition_result(
+        "isometric",
+        camera_object,
+        {
+            "grid_size": grid_size,
+            "floor": bool(params.get("floor", True)),
+            "shadow_catcher": bool(params.get("shadow_catcher", True)),
+            "ortho_scale": camera_object.data.ortho_scale,
+        },
+    )
+
+
+def _fallback_compose_character_scene(params):
+    scene = _fallback_get_scene()
+    character_name = str(params.get("character_name", "Character"))
+    environment = str(params.get("environment", "studio")).lower()
+    if environment not in {"studio", "outdoor", "night", "dramatic"}:
+        raise ValueError(f"Unsupported character environment: {environment}")
+
+    camera_object = _fallback_ensure_camera_object(f"{character_name} Camera")
+    _fallback_apply_camera_pose(
+        camera_object,
+        [0.0, -6.0, 2.4],
+        [math.radians(74.0), 0.0, 0.0],
+    )
+    camera_object.data.type = "PERSP"
+    camera_object.data.lens = 70.0
+    scene.camera = camera_object
+    return _fallback_composition_result(
+        "character",
+        camera_object,
+        {
+            "character_name": character_name,
+            "ground_plane": bool(params.get("ground_plane", True)),
+            "environment": environment,
+            "lens": 70.0,
+        },
+    )
+
+
+def _fallback_compose_automotive_shot(params):
+    scene = _fallback_get_scene()
+    car_name = str(params.get("car_name", "Car"))
+    angle = str(params.get("angle", "three_quarter")).lower()
+    environment = str(params.get("environment", "studio")).lower()
+    if angle not in {"front", "rear", "three_quarter", "side", "top"}:
+        raise ValueError(f"Unsupported automotive angle: {angle}")
+    if environment not in {"studio", "outdoor", "motion"}:
+        raise ValueError(f"Unsupported automotive environment: {environment}")
+
+    location_map = {
+        "front": [0.0, -9.0, 2.5],
+        "rear": [0.0, 9.0, 2.5],
+        "three_quarter": [6.0, -8.0, 3.0],
+        "side": [8.5, 0.0, 2.6],
+        "top": [0.0, -0.5, 11.0],
+    }
+    rotation_map = {
+        "front": [math.radians(78.0), 0.0, 0.0],
+        "rear": [math.radians(78.0), 0.0, math.radians(180.0)],
+        "three_quarter": [math.radians(76.0), 0.0, math.radians(35.0)],
+        "side": [math.radians(79.0), 0.0, math.radians(90.0)],
+        "top": [math.radians(5.0), 0.0, 0.0],
+    }
+    camera_object = _fallback_ensure_camera_object(f"{car_name} Camera")
+    _fallback_apply_camera_pose(camera_object, location_map[angle], rotation_map[angle])
+    camera_object.data.type = "PERSP"
+    camera_object.data.lens = 50.0 if angle == "top" else 70.0
+    scene.camera = camera_object
+    return _fallback_composition_result(
+        "automotive",
+        camera_object,
+        {
+            "car_name": car_name,
+            "angle": angle,
+            "environment": environment,
+            "lens": camera_object.data.lens,
+        },
+    )
+
+
+def _fallback_compose_food_shot(params):
+    scene = _fallback_get_scene()
+    style = str(params.get("style", "flat_lay")).lower()
+    if style not in {"flat_lay", "angled", "side"}:
+        raise ValueError(f"Unsupported food style: {style}")
+
+    camera_object = _fallback_ensure_camera_object("Food Camera")
+    if style == "flat_lay":
+        _fallback_apply_camera_pose(camera_object, [0.0, 0.0, 6.5], [0.0, 0.0, 0.0])
+        camera_object.data.lens = 55.0
+    elif style == "angled":
+        _fallback_apply_camera_pose(
+            camera_object,
+            [0.0, -5.0, 3.2],
+            [math.radians(66.0), 0.0, 0.0],
+        )
+        camera_object.data.lens = 65.0
+    else:
+        _fallback_apply_camera_pose(
+            camera_object,
+            [0.0, -4.8, 1.8],
+            [math.radians(83.0), 0.0, 0.0],
+        )
+        camera_object.data.lens = 80.0
+    camera_object.data.type = "PERSP"
+    scene.camera = camera_object
+    return _fallback_composition_result(
+        "food", camera_object, {"style": style, "lens": camera_object.data.lens}
+    )
+
+
+def _fallback_compose_jewelry_shot(params):
+    scene = _fallback_get_scene()
+    style = str(params.get("style", "macro")).lower()
+    if style not in {"macro", "editorial", "catalog"}:
+        raise ValueError(f"Unsupported jewelry style: {style}")
+
+    camera_object = _fallback_ensure_camera_object("Jewelry Camera")
+    _fallback_apply_camera_pose(
+        camera_object,
+        [0.0, -2.5, 1.4],
+        [math.radians(76.0), 0.0, 0.0],
+    )
+    camera_object.data.type = "PERSP"
+    camera_object.data.lens = 105.0
+    scene.camera = camera_object
+    return _fallback_composition_result(
+        "jewelry",
+        camera_object,
+        {
+            "style": style,
+            "reflections": bool(params.get("reflections", True)),
+            "lens": 105.0,
+        },
+    )
+
+
+def _fallback_compose_architectural_shot(params):
+    scene = _fallback_get_scene()
+    interior = bool(params.get("interior", False))
+    natural_light = bool(params.get("natural_light", True))
+
+    camera_object = _fallback_ensure_camera_object("Architectural Camera")
+    if interior:
+        _fallback_apply_camera_pose(
+            camera_object,
+            [0.0, -5.0, 1.7],
+            [math.radians(85.0), 0.0, 0.0],
+        )
+        camera_object.data.lens = 24.0
+    else:
+        _fallback_apply_camera_pose(
+            camera_object,
+            [7.5, -9.0, 4.5],
+            [math.radians(68.0), 0.0, math.radians(35.0)],
+        )
+        camera_object.data.lens = 35.0
+    camera_object.data.type = "PERSP"
+    scene.camera = camera_object
+    return _fallback_composition_result(
+        "architectural",
+        camera_object,
+        {
+            "interior": interior,
+            "natural_light": natural_light,
+            "lens": camera_object.data.lens,
+        },
+    )
+
+
+def _fallback_compose_studio_setup(params):
+    scene = _fallback_get_scene()
+    subject_type = str(params.get("subject_type", "generic"))
+    mood = str(params.get("mood", "neutral")).lower()
+    if mood not in {"neutral", "dramatic", "bright", "moody"}:
+        raise ValueError(f"Unsupported studio mood: {mood}")
+
+    camera_object = _fallback_ensure_camera_object(
+        f"{subject_type.title()} Studio Camera"
+    )
+    mood_offsets = {
+        "neutral": ([0.0, -5.5, 2.2], [math.radians(72.0), 0.0, 0.0]),
+        "dramatic": (
+            [1.2, -6.5, 2.8],
+            [math.radians(68.0), 0.0, math.radians(8.0)],
+        ),
+        "bright": ([0.0, -4.8, 2.0], [math.radians(74.0), 0.0, 0.0]),
+        "moody": (
+            [-1.0, -6.2, 2.4],
+            [math.radians(69.0), 0.0, math.radians(-8.0)],
+        ),
+    }
+    location, rotation = mood_offsets[mood]
+    _fallback_apply_camera_pose(camera_object, location, rotation)
+    camera_object.data.type = "PERSP"
+    camera_object.data.lens = 80.0
+    scene.camera = camera_object
+    return _fallback_composition_result(
+        "studio",
+        camera_object,
+        {"subject_type": subject_type, "mood": mood, "lens": 80.0},
+    )
+
+
+def _fallback_clear_scene(params):
+    scene = _fallback_get_scene()
+    keep_camera = bool(params.get("keep_camera", False))
+    keep_lights = bool(params.get("keep_lights", False))
+
+    removed_names = []
+    kept_names = []
+    scene_objects = getattr(scene, "objects", None)
+    collection_objects = getattr(getattr(scene, "collection", None), "objects", None)
+    linked = getattr(collection_objects, "linked", None)
+    for obj in list(getattr(scene, "objects", [])):
+        object_type = getattr(obj, "type", None)
+        if keep_camera and object_type == "CAMERA":
+            kept_names.append(obj.name)
+            continue
+        if keep_lights and object_type == "LIGHT":
+            kept_names.append(obj.name)
+            continue
+
+        removed_names.append(obj.name)
+        if isinstance(scene_objects, list) and obj in scene_objects:
+            scene_objects.remove(obj)
+        if isinstance(linked, list) and obj in linked:
+            linked.remove(obj)
+        bpy.data.objects.remove(obj, do_unlink=True)
+
+    if not keep_camera and getattr(scene, "camera", None) is not None:
+        scene.camera = None
+
+    return {
+        "status": "success",
+        "removed": removed_names,
+        "removed_count": len(removed_names),
+        "kept": kept_names,
+    }
+
+
+def _fallback_setup_render_settings(params):
+    scene = _fallback_get_scene()
+    render = getattr(scene, "render", None)
+    if render is None:
+        raise ValueError("Scene render settings are unavailable")
+
+    engine_input = str(params.get("engine", "CYCLES")).upper()
+    engine_map = {
+        "CYCLES": "CYCLES",
+        "EEVEE": "BLENDER_EEVEE",
+        "BLENDER_EEVEE": "BLENDER_EEVEE",
+        "BLENDER_EEVEE_NEXT": "BLENDER_EEVEE_NEXT",
+    }
+    if engine_input not in engine_map:
+        raise ValueError(f"Unsupported render engine: {engine_input}")
+
+    samples = int(params.get("samples", 128))
+    resolution_x = int(params.get("resolution_x", 1920))
+    resolution_y = int(params.get("resolution_y", 1080))
+    if samples <= 0:
+        raise ValueError("samples must be greater than 0")
+    if resolution_x <= 0 or resolution_y <= 0:
+        raise ValueError("resolution_x and resolution_y must be greater than 0")
+
+    normalized_engine = engine_map[engine_input]
+    render.engine = normalized_engine
+    render.resolution_x = resolution_x
+    render.resolution_y = resolution_y
+    denoise = bool(params.get("denoise", True))
+
+    if normalized_engine == "CYCLES":
+        cycles = getattr(scene, "cycles", None)
+        if cycles is not None:
+            cycles.samples = samples
+            if hasattr(cycles, "use_denoising"):
+                cycles.use_denoising = denoise
+    else:
+        eevee = getattr(scene, "eevee", None)
+        if eevee is not None and hasattr(eevee, "taa_render_samples"):
+            eevee.taa_render_samples = samples
+
+    return {
+        "status": "success",
+        "engine": "EEVEE"
+        if normalized_engine.startswith("BLENDER_EEVEE")
+        else normalized_engine,
+        "samples": samples,
+        "resolution_x": resolution_x,
+        "resolution_y": resolution_y,
+        "denoise": denoise,
+    }
+
+
+def _composition_fallback_handlers():
+    class _Handlers:
+        compose_product_shot = staticmethod(_fallback_compose_product_shot)
+        compose_isometric_scene = staticmethod(_fallback_compose_isometric_scene)
+        compose_character_scene = staticmethod(_fallback_compose_character_scene)
+        compose_automotive_shot = staticmethod(_fallback_compose_automotive_shot)
+        compose_food_shot = staticmethod(_fallback_compose_food_shot)
+        compose_jewelry_shot = staticmethod(_fallback_compose_jewelry_shot)
+        compose_architectural_shot = staticmethod(_fallback_compose_architectural_shot)
+        compose_studio_setup = staticmethod(_fallback_compose_studio_setup)
+        clear_scene = staticmethod(_fallback_clear_scene)
+        setup_render_settings = staticmethod(_fallback_setup_render_settings)
+
+    return _Handlers
+
+
+def _dispatch_composition_command(command_type, params):
+    """Dispatch composition commands through modular handlers or local fallback."""
+    try:
+        from blender_mcp_addon.handlers import composition as composition_handlers
+    except ImportError:
+        composition_handlers = _composition_fallback_handlers()
+
+    if command_type == "compose_product_shot":
+        return composition_handlers.compose_product_shot(params)
+    elif command_type == "compose_isometric_scene":
+        return composition_handlers.compose_isometric_scene(params)
+    elif command_type == "compose_character_scene":
+        return composition_handlers.compose_character_scene(params)
+    elif command_type == "compose_automotive_shot":
+        return composition_handlers.compose_automotive_shot(params)
+    elif command_type == "compose_food_shot":
+        return composition_handlers.compose_food_shot(params)
+    elif command_type == "compose_jewelry_shot":
+        return composition_handlers.compose_jewelry_shot(params)
+    elif command_type == "compose_architectural_shot":
+        return composition_handlers.compose_architectural_shot(params)
+    elif command_type == "compose_studio_setup":
+        return composition_handlers.compose_studio_setup(params)
+    elif command_type == "clear_scene":
+        return composition_handlers.clear_scene(params)
+    elif command_type == "setup_render_settings":
+        return composition_handlers.setup_render_settings(params)
+
+    raise ValueError(f"Unknown composition command type: {command_type}")
+
+
 # =============================================================================
 # SERVER MODULE
 # =============================================================================
@@ -2572,6 +3390,16 @@ class BlenderMCPServer:
             return create_camera(params)
         elif command_type == "create_light":
             return create_light(params)
+        elif command_type in {
+            "create_composition_camera",
+            "create_isometric_camera",
+            "set_camera_depth_of_field",
+            "apply_camera_preset",
+            "set_active_camera",
+            "list_cameras",
+            "frame_camera_to_selection",
+        }:
+            return _dispatch_camera_command(command_type, params)
         elif command_type == "set_transform":
             return set_transform(params)
         elif command_type == "select_objects":
@@ -2605,6 +3433,19 @@ class BlenderMCPServer:
             "list_lights",
         }:
             return _dispatch_lighting_command(command_type, params)
+        elif command_type in {
+            "compose_product_shot",
+            "compose_isometric_scene",
+            "compose_character_scene",
+            "compose_automotive_shot",
+            "compose_food_shot",
+            "compose_jewelry_shot",
+            "compose_architectural_shot",
+            "compose_studio_setup",
+            "clear_scene",
+            "setup_render_settings",
+        }:
+            return _dispatch_composition_command(command_type, params)
         elif command_type == "set_world_hdri":
             return set_world_hdri(params)
         elif command_type == "execute_blender_code":
