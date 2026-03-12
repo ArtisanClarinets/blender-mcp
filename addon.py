@@ -2391,6 +2391,27 @@ def _dispatch_rigging_command(command_type, params):
     raise ValueError(f"Unknown rigging command type: {command_type}")
 
 
+def _dispatch_atmospherics_command(command_type, params):
+    """Dispatch atmospherics commands through modular handlers."""
+    try:
+        from blender_mcp_addon.handlers import atmospherics_handler
+    except ImportError:
+        raise ImportError("Atmospherics handlers not available.")
+
+    if command_type == "get_atmospherics_status":
+        return atmospherics_handler.get_status()
+    elif command_type == "create_volumetric_fog":
+        return atmospherics_handler.create_volumetric_fog(params)
+    elif command_type == "create_weather_system":
+        return atmospherics_handler.create_weather_system(params)
+    elif command_type == "create_sky_system":
+        return atmospherics_handler.create_sky_system(params)
+    elif command_type == "create_atmospheric_scattering":
+        return atmospherics_handler.create_atmospheric_scattering(params)
+
+    raise ValueError(f"Unknown atmospherics command: {command_type}")
+
+
 def _dispatch_animation_command(command_type, params):
     """Dispatch animation commands through modular handlers."""
     try:
@@ -4027,6 +4048,14 @@ class BlenderMCPServer:
         }:
             return _dispatch_rigging_command(command_type, params)
         elif command_type in {
+            "get_atmospherics_status",
+            "create_volumetric_fog",
+            "create_weather_system",
+            "create_sky_system",
+            "create_atmospheric_scattering",
+        }:
+            return _dispatch_atmospherics_command(command_type, params)
+        elif command_type in {
             "get_animation_status",
             "create_animation_layer",
             "set_keyframe",
@@ -4036,6 +4065,14 @@ class BlenderMCPServer:
             "create_facial_animation",
         }:
             return _dispatch_animation_command(command_type, params)
+        elif command_type in {
+            "get_advanced_materials_status",
+            "create_subsurface_material",
+            "create_volume_material",
+            "create_anisotropic_material",
+            "create_layered_material",
+        }:
+            return _dispatch_advanced_materials_command(command_type, params)
         elif command_type == "set_world_hdri":
             return set_world_hdri(params)
         elif command_type == "execute_blender_code":
