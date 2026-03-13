@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import uuid
 from datetime import datetime, UTC
 from typing import Any, Dict
@@ -193,3 +194,48 @@ def setup_stereoscopic_render(params: Dict[str, Any]) -> Dict[str, Any]:
         if hasattr(stereo, "display_mode"):
             stereo.display_mode = display_mode
     return {"status": "success", "stereo": applied}
+
+
+def export_render_manifest(params: Dict[str, Any]) -> Dict[str, Any]:
+    """Export a render job manifest (JSON) for external runners or farm submission."""
+    output_path = str(params.get("output_path") or "").strip()
+    if not output_path:
+        output_path = bpy.path.abspath("//renders/render_manifest.json")
+    include_queued_jobs = bool(params.get("include_queued_jobs", True))
+
+    scene = bpy.context.scene
+    render = scene.render
+    manifest = {
+        "version": "1.0",
+        "generated_at": _utc_now(),
+        "scene_name": scene.name,
+        "frame_start": scene.frame_start,
+        "frame_end": scene.frame_end,
+        "fps": scene.render.fps,
+        "resolution": [render.resolution_x, render.resolution_y],
+        "resolution_percentage": render.resolution_percentage,
+        "engine": render.engine,
+        "output_path": bpy.path.abspath(render.filepath),
+        "file_format": getattr(render.image_settings, "file_format", "PNG"),
+    }
+    if include_queued_jobs:
+        store = _load_store()
+        jobs = list(store.get("jobs", {}).values())
+        manifest["queued_jobs"] = [
+            {
+                "job_id": j.get("job_id"),
+                "job_name": j.get("job_name"),
+                "frame_range": j.get("frame_range"),
+                "output_path": j.get("output_path"),
+                "priority": j.get("priority"),
+                "status": j.get("status"),
+            }
+            for j in jobs
+        ]
+    abs_path = bpy.path.abspath(output_path)
+    dirname = os.path.dirname(abs_path)
+    if dirname:
+        os.makedirs(dirname, exist_ok=True)
+    with open(abs_path, "w", encoding="utf-8") as f:
+        json.dump(manifest, f, indent=2)
+    return {"status": "success", "manifest_path": abs_path, "manifest": manifest}

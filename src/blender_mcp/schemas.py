@@ -79,12 +79,39 @@ class ExportSceneBundlePayload(CommandPayloadModel):
     generate_r3f: bool = False
 
 
+class CreateShotPayload(CommandPayloadModel):
+    shot_name: str = Field(min_length=1)
+    sequence: str = Field(min_length=1)
+    shot_number: int = Field(gt=0)
+    description: str = ""
+    duration: float = Field(ge=0.0, default=0.0)
+    assets: list[str] | None = None
+
+
+class CreateRenderJobPayload(CommandPayloadModel):
+    job_name: str = Field(min_length=1)
+    frame_range: list[int] = Field(min_length=2, max_length=2)
+    output_path: str = Field(min_length=1)
+    priority: int = Field(ge=1, le=10, default=1)
+    nodes: int = Field(ge=1, default=1)
+    render_settings: dict[str, Any] | None = None
+
+
+class ObserveScenePayload(CommandPayloadModel):
+    detail: Literal["low", "med", "high"] = "med"
+    include_screenshot: bool = False
+    max_screenshot_size: int = Field(ge=1, le=4096, default=800)
+
+
 MANUAL_COMMAND_SCHEMAS: dict[str, type[CommandPayloadModel]] = {
     "create_primitive": CreatePrimitivePayload,
     "create_bsdf_material": CreateBsdfMaterialPayload,
     "create_area_light": CreateAreaLightPayload,
     "create_composition_camera": CreateCompositionCameraPayload,
     "export_scene_bundle": ExportSceneBundlePayload,
+    "create_shot": CreateShotPayload,
+    "create_render_job": CreateRenderJobPayload,
+    "observe_scene": ObserveScenePayload,
 }
 
 
@@ -162,7 +189,10 @@ __all__ = [
     "CreateBsdfMaterialPayload",
     "CreateCompositionCameraPayload",
     "CreatePrimitivePayload",
+    "CreateRenderJobPayload",
+    "CreateShotPayload",
     "ExportSceneBundlePayload",
+    "ObserveScenePayload",
     "get_command_schema",
     "has_command_schema",
     "validate_command_payload",

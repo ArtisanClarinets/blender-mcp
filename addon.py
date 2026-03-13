@@ -30,7 +30,7 @@ import zipfile
 import subprocess
 import sys
 from pathlib import Path
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from bpy.props import (
     StringProperty,
     IntProperty,
@@ -3328,7 +3328,7 @@ def _legacy_create_provider_job(provider, payload):
         raise ValueError("payload must be an object")
 
     job_id = f"job_{uuid.uuid4().hex[:12]}"
-    timestamp = datetime.now(UTC).isoformat()
+    timestamp = datetime.now(timezone.utc).isoformat()
     job = {
         "job_id": job_id,
         "provider": provider,
@@ -3397,7 +3397,7 @@ def _legacy_complete_provider_job(provider, job):
 
     job["progress"] = 100.0
     job["message"] = f"{provider} job completed"
-    job["updated_at"] = datetime.now(UTC).isoformat()
+    job["updated_at"] = datetime.now(timezone.utc).isoformat()
     return job
 
 
@@ -3530,7 +3530,7 @@ def _dispatch_hyper3d_command_fallback(command_type, params):
 
         job = _legacy_create_provider_job("hyper3d", payload)
         job["external_id"] = job["job_id"]
-        job["updated_at"] = datetime.now(UTC).isoformat()
+        job["updated_at"] = datetime.now(timezone.utc).isoformat()
         return {
             "uuid": job["job_id"],
             "submit_time": True,
@@ -3552,7 +3552,7 @@ def _dispatch_hyper3d_command_fallback(command_type, params):
 
         job = _legacy_create_provider_job("hyper3d", payload)
         job["external_id"] = job["job_id"]
-        job["updated_at"] = datetime.now(UTC).isoformat()
+        job["updated_at"] = datetime.now(timezone.utc).isoformat()
         return {
             "job_id": job["job_id"],
             "request_id": job["external_id"],
@@ -3576,7 +3576,7 @@ def _dispatch_hyper3d_command_fallback(command_type, params):
 
         job = _legacy_create_provider_job("hyper3d", payload)
         job["external_id"] = job["job_id"]
-        job["updated_at"] = datetime.now(UTC).isoformat()
+        job["updated_at"] = datetime.now(timezone.utc).isoformat()
         return {
             "job_id": job["job_id"],
             "request_id": job["external_id"],
@@ -3857,6 +3857,28 @@ def _dispatch_material_command(command_type, params):
         return material_handlers.delete_material(params)
 
     raise ValueError(f"Unknown material command type: {command_type}")
+
+
+def _dispatch_advanced_materials_command(command_type, params):
+    """Dispatch advanced materials commands through modular handlers or local fallback."""
+    try:
+        from blender_mcp_addon.handlers import advanced_materials as advanced_materials_handlers
+    except ImportError:
+        # Fallback to basic material handlers
+        return _dispatch_material_command(command_type, params)
+
+    if command_type == "get_advanced_materials_status":
+        return {"status": "available", "features": ["subsurface", "volume", "anisotropic", "layered"]}
+    elif command_type == "create_subsurface_material":
+        return advanced_materials_handlers.create_subsurface_material(params)
+    elif command_type == "create_volume_material":
+        return advanced_materials_handlers.create_volume_material(params)
+    elif command_type == "create_anisotropic_material":
+        return advanced_materials_handlers.create_anisotropic_material(params)
+    elif command_type == "create_layered_material":
+        return advanced_materials_handlers.create_layered_material(params)
+
+    raise ValueError(f"Unknown advanced materials command type: {command_type}")
 
 
 def _dispatch_polyhaven_command(command_type, params):

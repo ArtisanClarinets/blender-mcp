@@ -299,7 +299,10 @@ class BlenderConnection:
         return response.get("result", response)
 
     def send_command(
-        self, command_type: str, params: Optional[Dict[str, Any]] = None
+        self,
+        command_type: str,
+        params: Optional[Dict[str, Any]] = None,
+        idempotency_key: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Sends a command to Blender and returns the response."""
         self._ensure_connected()
@@ -315,11 +318,13 @@ class BlenderConnection:
                     f"Invalid payload for command '{command_type}': {error}"
                 ) from error
 
-        command = {
+        command: Dict[str, Any] = {
             "type": command_type,
             "params": validated_params,
             "request_id": uuid.uuid4().hex,
         }
+        if idempotency_key is not None:
+            command["idempotency_key"] = idempotency_key
 
         try:
             if not self.circuit_breaker.allow_request():
@@ -368,7 +373,7 @@ def get_blender_connection() -> BlenderConnection:
 
     if _blender_connection is not None:
         try:
-            _blender_connection.send_command("get_polyhaven_status")
+            _blender_connection.send_command("get_scene_hash", {})
             return _blender_connection
         except BlenderMCPError as e:
             logger.warning(f"Existing connection is no longer valid: {str(e)}")
@@ -390,3 +395,14 @@ def get_blender_connection() -> BlenderConnection:
         logger.info("Created new persistent connection to Blender")
 
     return _blender_connection
+
+
+def shutdown_connection() -> None:
+    """Disconnect and clear the global Blender connection. Call from server shutdown."""
+    global _blender_connection
+    if _blender_connection is not None:
+        try:
+            _blender_connection.disconnect()
+        except Exception as error:
+            logger.warning("Failed to disconnect Blender on shutdown", error=str(error))
+        _blender_connection = None

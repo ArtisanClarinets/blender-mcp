@@ -64,9 +64,42 @@ def get_status() -> Dict[str, Any]:
     return {
         "status": "ready",
         "shots": len(store.get("shots", {})),
+        "sequences": len(_sequences_set(store)),
         "review_enabled": True,
         "versioning_enabled": True,
     }
+
+
+def _sequences_set(store: dict[str, Any]) -> set[str]:
+    shots = store.get("shots", {})
+    return {s.get("sequence") for s in shots.values() if s.get("sequence")}
+
+
+def list_sequences(params: Dict[str, Any]) -> Dict[str, Any]:
+    store = _load_store()
+    names = sorted(_sequences_set(store))
+    return {"status": "success", "sequences": names}
+
+
+def get_sequence(params: Dict[str, Any]) -> Dict[str, Any]:
+    sequence_name = str(params.get("sequence_name") or "").strip()
+    if not sequence_name:
+        raise ValueError("sequence_name is required")
+    store = _load_store()
+    shots = store.get("shots", {})
+    matching = [s for s in shots.values() if s.get("sequence") == sequence_name]
+    matching.sort(key=lambda s: (s.get("shot_number", 0), s.get("shot_name", "")))
+    return {"status": "success", "sequence": sequence_name, "shots": matching}
+
+
+def list_shots(params: Dict[str, Any]) -> Dict[str, Any]:
+    sequence_name = (params.get("sequence_name") or "").strip() or None
+    store = _load_store()
+    shots = list(store.get("shots", {}).values())
+    if sequence_name:
+        shots = [s for s in shots if s.get("sequence") == sequence_name]
+    shots.sort(key=lambda s: (s.get("sequence", ""), s.get("shot_number", 0), s.get("shot_name", "")))
+    return {"status": "success", "shots": shots}
 
 
 

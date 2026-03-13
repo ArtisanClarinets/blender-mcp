@@ -223,6 +223,9 @@ COMMAND_HANDLERS: dict[str, CommandHandler] = {
     "create_atmospheric_scattering": _attr(atmospherics_handler, "create_atmospheric_scattering"),
     # Production and render pipeline
     "get_production_status": _status(_attr(production, "get_status")),
+    "list_sequences": _attr(production, "list_sequences"),
+    "get_sequence": _attr(production, "get_sequence"),
+    "list_shots": _attr(production, "list_shots"),
     "create_shot": _attr(production, "create_shot"),
     "setup_shot_camera": _attr(production, "setup_shot_camera"),
     "create_shot_version": _attr(production, "create_shot_version"),
@@ -230,6 +233,7 @@ COMMAND_HANDLERS: dict[str, CommandHandler] = {
     "get_render_pipeline_status": _status(_attr(render_pipeline, "get_status")),
     "create_render_job": _attr(render_pipeline, "create_render_job"),
     "monitor_render_job": _attr(render_pipeline, "monitor_render_job"),
+    "export_render_manifest": _attr(render_pipeline, "export_render_manifest"),
     "optimize_render_settings": _attr(render_pipeline, "optimize_render_settings"),
     "setup_render_passes": _attr(render_pipeline, "setup_render_passes"),
     "render_animation_passes": _attr(render_pipeline, "render_animation_passes"),

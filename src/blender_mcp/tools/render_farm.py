@@ -127,3 +127,32 @@ async def optimize_render_settings(
     except Exception as e:
         logger.error(f"Error optimizing render settings: {str(e)}")
         return json.dumps({"error": str(e)})
+
+
+@telemetry_tool("export_render_manifest")
+@mcp.tool()
+async def export_render_manifest(
+    ctx: Context,
+    output_path: Optional[str] = None,
+    include_queued_jobs: bool = True,
+) -> str:
+    """
+    Export a render job manifest (JSON) for external runners or farm submission.
+
+    Parameters:
+    - output_path: File path for the manifest JSON (default: //renders/render_manifest.json)
+    - include_queued_jobs: Include queued render jobs in the manifest
+
+    Returns:
+    - JSON string with manifest_path and manifest
+    """
+    try:
+        blender = get_blender_connection()
+        params = {"include_queued_jobs": include_queued_jobs}
+        if output_path:
+            params["output_path"] = output_path
+        result = blender.send_command("export_render_manifest", params)
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error exporting render manifest: {str(e)}")
+        return json.dumps({"error": str(e)})

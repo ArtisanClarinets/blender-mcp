@@ -246,6 +246,34 @@ result = call_tool("download_sketchfab_model", {"uid": "model123", "target_size"
 - `poll_hunyuan_job_status(job_id)` - Check job status
 - `import_generated_asset_hunyuan(name, zip_file_url)` - Import result
 
+## MCP Prompts and When to Use Them
+
+The server exposes strategy prompts that agents should use for different workflows:
+
+- **asset_creation_strategy** – Use when creating or sourcing 3D assets (models, materials, HDRIs). Prefer PolyHaven, Sketchfab, Hyper3D, Hunyuan3D; fall back to code only when necessary.
+- **production_pipeline_strategy** – Use when managing shots, versions, and review: create_shot, setup_shot_camera, create_shot_version, review_shot, create_render_job, monitor_render_job.
+- **animation_rigging_strategy** – Use when rigging characters and animating: get_rigging_status/get_animation_status, create_auto_rig, set_keyframe, create_animation_layer, etc.
+- **autonomous_production_workflow** – Use for end-to-end production: observe → create shot → layout (assets, camera, lighting) → rigging/animation → shot versions → render setup → review. Emphasizes observe → plan → act → observe and idempotency.
+
+### Command timeouts and idempotency
+
+- **Timeouts**: The addon uses a base command timeout (default 30s, set via `BLENDER_MCP_CMD_TIMEOUT`). Render and export commands get a longer timeout (up to 300s). Clients can pass `timeout_sec` in params (capped at 600s) for heavy operations.
+- **Idempotency**: Pass `idempotency_key` when calling `send_command()` (or equivalent from tools) for create_shot, create_render_job, and other operations that should be safe to retry. The addon caches responses by key and returns the cached result for duplicate requests.
+
+### Production and render pipeline workflow
+
+1. Check `get_production_status()` and `get_render_pipeline_status()`.
+2. Create shots with `create_shot()`; set up cameras with `setup_shot_camera()`.
+3. Use `create_shot_version()` for layout, animation, lighting, render iterations.
+4. Use `create_render_job()` and `monitor_render_job()` for local queue; use export_render_manifest (when available) for farm handoff.
+5. Use `review_shot()` to record approval or feedback.
+
+### Export options
+
+- **GLB / Next.js**: `export_glb`, `export_scene_bundle` (GLB with Draco, manifest, preview, optional R3F components).
+- **Render**: `render_preview`, `setup_render_passes`, `render_animation_passes`; render jobs via `create_render_job`.
+- **Pipeline** (when implemented): USD and Alembic export for interchange and farm rendering; render manifest for external runners.
+
 ## Autonomous Agent Guidelines
 
 ### Never use execute_blender_code unless needed

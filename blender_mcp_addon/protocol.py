@@ -131,3 +131,16 @@ def get_request_id(command: Dict[str, Any]) -> str:
 def get_idempotency_key(command: Dict[str, Any]) -> Optional[str]:
     """Get the idempotency key if present."""
     return command.get("idempotency_key")
+
+
+def try_request_id_from_raw(data: bytes) -> Optional[str]:
+    """
+    Best-effort extract request_id from raw message for error responses.
+    Returns None if not parseable.
+    """
+    try:
+        obj = json.loads(data.decode("utf-8").strip())
+        rid = obj.get("request_id")
+        return str(rid) if rid is not None else None
+    except (json.JSONDecodeError, UnicodeDecodeError, TypeError):
+        return None

@@ -5,7 +5,8 @@ Provides utility functions for creating consistent responses
 """
 
 from typing import Any, Dict, Optional
-from .protocol import ResponseEnvelope, TelemetryStatus
+from .protocol import ResponseEnvelope
+from .telemetry import TelemetryStatus
 
 
 def ok(

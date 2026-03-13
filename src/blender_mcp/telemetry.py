@@ -167,6 +167,7 @@ def record_tool_usage(
     request_id: str = "",
     metadata: dict[str, Any] | None = None,
 ) -> None:
+    """Record a tool usage event. duration must be in seconds."""
     if not telemetry_config.enabled:
         return
     collector.record_event(

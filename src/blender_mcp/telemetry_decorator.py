@@ -31,12 +31,12 @@ def telemetry_tool(tool_name: str):
                 error = str(exc)
                 raise
             finally:
-                duration_ms = (time.time() - start_time) * 1000
+                duration_sec = time.time() - start_time
                 try:
                     record_tool_usage(
                         tool_name,
                         TelemetryStatus.SUCCESS if success else TelemetryStatus.FAILURE,
-                        duration_ms,
+                        duration_sec,
                         metadata={"error": error} if error else None,
                     )
                 except Exception as log_error:  # pragma: no cover
@@ -55,12 +55,12 @@ def telemetry_tool(tool_name: str):
                 error = str(exc)
                 raise
             finally:
-                duration_ms = (time.time() - start_time) * 1000
+                duration_sec = time.time() - start_time
                 try:
                     record_tool_usage(
                         tool_name,
                         TelemetryStatus.SUCCESS if success else TelemetryStatus.FAILURE,
-                        duration_ms,
+                        duration_sec,
                         metadata={"error": error} if error else None,
                     )
                 except Exception as log_error:  # pragma: no cover
