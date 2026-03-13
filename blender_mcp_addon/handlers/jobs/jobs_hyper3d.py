@@ -5,7 +5,9 @@ from __future__ import annotations
 from typing import Any, Dict, Optional
 
 import bpy
+import structlog
 
+from ...exceptions import BlenderMCPError
 from .jobs_common import (
     build_import_response,
     build_job_snapshot,
@@ -15,28 +17,29 @@ from .jobs_common import (
     update_job_record,
 )
 
+logger = structlog.get_logger(__name__)
 
 _jobs: Dict[str, Dict[str, Any]] = {}
 
-
 def _normalize_text_prompt(value: Any) -> Optional[str]:
+    """Normalize a text prompt."""
     if not isinstance(value, str):
         return None
     text_prompt = value.strip()
     return text_prompt or None
 
-
 def _normalize_image_inputs(value: Any, field_name: str) -> Optional[list[Any]]:
+    """Normalize image inputs."""
     if value is None:
         return None
     if not isinstance(value, list) or not value:
-        raise ValueError(f"{field_name} must be a non-empty list")
+        raise BlenderMCPError(f"{field_name} must be a non-empty list")
     return value
 
-
 def _build_generation_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """Build a generation payload."""
     if not isinstance(payload, dict):
-        raise ValueError("payload must be an object")
+        raise BlenderMCPError("payload must be an object")
 
     normalized_payload: Dict[str, Any] = {}
     text_prompt = _normalize_text_prompt(payload.get("text_prompt"))
@@ -54,7 +57,7 @@ def _build_generation_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
     if input_image_urls is not None:
         normalized_payload["input_image_urls"] = input_image_urls
     if not normalized_payload:
-        raise ValueError(
+        raise BlenderMCPError(
             "text_prompt, input_image_paths, or input_image_urls is required"
         )
 
@@ -64,13 +67,12 @@ def _build_generation_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
 
     return normalized_payload
 
-
 def _get_settings() -> Any:
+    """Get the addon settings."""
     scene = getattr(bpy.context, "scene", None)
     if scene is None:
         return None
     return getattr(scene, "blendermcp_settings", None)
-
 
 def get_status() -> Dict[str, Any]:
     """Get Hyper3D integration status."""
@@ -78,6 +80,7 @@ def get_status() -> Dict[str, Any]:
     enabled = bool(getattr(settings, "hyper3d_enabled", False))
     api_key = getattr(settings, "hyper3d_api_key", None)
     mode = getattr(settings, "hyper3d_mode", "main_site")
+    logger.info("Getting Hyper3D status", enabled=enabled, mode=mode)
     return {
         "enabled": enabled,
         "has_api_key": bool(api_key),
@@ -87,8 +90,8 @@ def get_status() -> Dict[str, Any]:
         "modes": ["MAIN_SITE", "FAL_AI"],
     }
 
-
 def _get_job_by_identifier(identifier: Optional[str]) -> Optional[Dict[str, Any]]:
+    """Get a job by its identifier."""
     if not identifier:
         return None
 
@@ -101,7 +104,6 @@ def _get_job_by_identifier(identifier: Optional[str]) -> Optional[Dict[str, Any]
             return job
     return None
 
-
 def create_job(payload: Dict[str, Any]) -> Dict[str, Any]:
     """Create a new Hyper3D generation job."""
     normalized_payload = _build_generation_payload(payload)
@@ -112,13 +114,13 @@ def create_job(payload: Dict[str, Any]) -> Dict[str, Any]:
         or job["job_id"]
     )
     update_job_record(job, external_id=external_id)
+    logger.info("Created Hyper3D job", job_id=job["job_id"])
     return {
         "job_id": job["job_id"],
         "provider": job["provider"],
         "status": job["status"],
         "request_id": external_id,
     }
-
 
 def get_job(params: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """Get job status."""
@@ -127,14 +129,13 @@ def get_job(params: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         return None
     return build_job_snapshot(job)
 
-
 def generate_via_text(params: Dict[str, Any]) -> Dict[str, Any]:
     """Generate a model from text."""
     text_prompt = params.get("text_prompt")
     if not text_prompt:
-        raise ValueError("text_prompt is required")
+        raise BlenderMCPError("text_prompt is required")
 
-    payload = {"text_prompt": text_prompt}
+    payload: Dict[str, Any] = {"text_prompt": text_prompt}
     if params.get("bbox_condition") is not None:
         payload["bbox_condition"] = params["bbox_condition"]
 
@@ -146,13 +147,12 @@ def generate_via_text(params: Dict[str, Any]) -> Dict[str, Any]:
         "message": "Text generation job created",
     }
 
-
-def generate_via_images(params: Dict[str, Any]) -> Dict[str, Any]:
+def generate_vi-images(params: Dict[str, Any]) -> Dict[str, Any]:
     """Generate a model from image references."""
     input_image_paths = params.get("input_image_paths")
     input_image_urls = params.get("input_image_urls")
     if not input_image_paths and not input_image_urls:
-        raise ValueError("input_image_paths or input_image_urls is required")
+        raise BlenderMCPError("input_image_paths or input_image_urls is required")
 
     payload: Dict[str, Any] = {}
     if input_image_paths:
@@ -170,13 +170,12 @@ def generate_via_images(params: Dict[str, Any]) -> Dict[str, Any]:
         "message": "Image generation job created",
     }
 
-
 def poll_job_status(params: Dict[str, Any]) -> Dict[str, Any]:
     """Poll a Hyper3D job status."""
     identifier = params.get("request_id") or params.get("subscription_key")
     job = _get_job_by_identifier(identifier)
     if job is None:
-        raise ValueError(
+        raise BlenderMCPError(
             "request_id or subscription_key must reference an existing job"
         )
 
@@ -196,14 +195,14 @@ def poll_job_status(params: Dict[str, Any]) -> Dict[str, Any]:
 
     response = build_job_snapshot(job)
     response.update(job["result"] or {})
+    logger.info("Polled Hyper3D job status", job_id=job["job_id"], status=job["status"])
     return response
-
 
 def import_asset(params: Dict[str, Any]) -> Dict[str, Any]:
     """Import a generated Hyper3D asset."""
     name = params.get("name")
     if not name:
-        raise ValueError("name is required")
+        raise BlenderMCPError("name is required")
 
     identifier = params.get("request_id") or params.get("task_uuid")
     job = _get_job_by_identifier(identifier)
@@ -219,6 +218,7 @@ def import_asset(params: Dict[str, Any]) -> Dict[str, Any]:
             "task_uuid": params.get("task_uuid"),
         }
 
+    logger.info("Importing Hyper3D asset", name=name, source=source)
     return build_import_response(
         "hyper3d",
         name,
@@ -227,18 +227,18 @@ def import_asset(params: Dict[str, Any]) -> Dict[str, Any]:
         metadata={**metadata, "model_url": source} if source is not None else metadata,
     )
 
-
 def import_job_result(params: Dict[str, Any]) -> Dict[str, Any]:
     """Import the result of a completed Hyper3D job."""
     job_id = params.get("job_id")
     name = params.get("name")
     if not job_id:
-        raise ValueError("job_id is required")
+        raise BlenderMCPError("job_id is required")
     if not name:
-        raise ValueError("name is required")
+        raise BlenderMCPError("name is required")
 
     job = _jobs.get(job_id)
     result = ensure_completed_job(job, job_id)
+    logger.info("Importing Hyper3D job result", job_id=job_id, name=name)
     return build_import_response(
         "hyper3d",
         name,

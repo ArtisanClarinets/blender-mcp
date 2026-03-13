@@ -1,5 +1,4 @@
-"""
-Scene composition handlers for Blender MCP addon.
+"""Scene composition handlers for Blender MCP addon.
 
 Implements focused composition presets, scene cleanup, and render setup.
 """
@@ -8,9 +7,13 @@ import math
 from typing import Any, Dict, List
 
 import bpy
+import structlog
 
+from ...exceptions import BlenderMCPError
 
-_BACKGROUND_COLORS = {
+logger = structlog.get_logger(__name__)
+
+_BACKGROUND_COLORS: Dict[str, List[float]] = {
     "white": [1.0, 1.0, 1.0],
     "black": [0.02, 0.02, 0.02],
     "gradient": [0.82, 0.86, 0.92],
@@ -25,21 +28,21 @@ _FOOD_STYLES = {"flat_lay", "angled", "side"}
 _JEWELRY_STYLES = {"macro", "editorial", "catalog"}
 _STUDIO_MOODS = {"neutral", "dramatic", "bright", "moody"}
 
-
-def _get_scene():
+def _get_scene() -> Any:
+    """Get the active scene."""
     scene = getattr(bpy.context, "scene", None)
     if scene is None:
-        raise ValueError("No active scene available")
+        raise BlenderMCPError("No active scene available")
     return scene
 
-
 def _normalize_vector(value: List[float], field_name: str) -> List[float]:
+    """Normalize a vector to a list of 3 floats."""
     if len(value) != 3:
         raise ValueError(f"{field_name} must contain exactly 3 values")
     return [float(component) for component in value]
 
-
-def _get_collection_for_linking(scene):
+def _get_collection_for_linking(scene: Any) -> Any:
+    """Get the collection to link new objects to."""
     collection = getattr(bpy.context, "collection", None)
     if collection is not None and getattr(collection, "objects", None) is not None:
         return collection
@@ -51,14 +54,14 @@ def _get_collection_for_linking(scene):
     ):
         return scene_collection
 
-    raise ValueError("No active collection available to link new camera")
+    raise BlenderMCPError("No active collection available to link new camera")
 
-
-def _ensure_camera_object(name: str):
+def _ensure_camera_object(name: str) -> Any:
+    """Ensure a camera object with the given name exists."""
     existing_object = bpy.data.objects.get(name)
     if existing_object is not None:
         if getattr(existing_object, "type", None) != "CAMERA":
-            raise ValueError(f"Object exists and is not a camera: {name}")
+            raise BlenderMCPError(f"Object exists and is not a camera: {name}")
         return existing_object
 
     camera_data = bpy.data.cameras.new(name=name)
@@ -67,8 +70,8 @@ def _ensure_camera_object(name: str):
     _get_collection_for_linking(scene).objects.link(camera_object)
     return camera_object
 
-
-def _ensure_world(scene):
+def _ensure_world(scene: Any) -> Any:
+    """Ensure a world exists for the scene."""
     world = getattr(scene, "world", None)
     if world is not None:
         return world
@@ -80,11 +83,11 @@ def _ensure_world(scene):
 
     return None
 
-
-def _set_world_background(scene, background: str) -> str:
+def _set_world_background(scene: Any, background: str) -> str:
+    """Set the world background color."""
     normalized_background = str(background or "white").lower()
     if normalized_background not in _SUPPORTED_BACKGROUNDS:
-        raise ValueError(f"Unsupported product background: {normalized_background}")
+        raise BlenderMCPError(f"Unsupported product background: {normalized_background}")
 
     if normalized_background == "transparent":
         scene.render.film_transparent = True
@@ -99,19 +102,19 @@ def _set_world_background(scene, background: str) -> str:
 
     return str(background or "white").lower()
 
-
-def _activate_camera(scene, camera_object) -> None:
+def _activate_camera(scene: Any, camera_object: Any) -> None:
+    """Activate a camera in the scene."""
     scene.camera = camera_object
 
-
-def _apply_camera(camera_object, location: List[float], rotation: List[float]) -> None:
+def _apply_camera(camera_object: Any, location: List[float], rotation: List[float]) -> None:
+    """Apply location and rotation to a camera."""
     camera_object.location = _normalize_vector(location, "location")
     camera_object.rotation_euler = _normalize_vector(rotation, "rotation")
 
-
 def _composition_result(
-    preset: str, camera_object, extra: Dict[str, Any]
+    preset: str, camera_object: Any, extra: Dict[str, Any]
 ) -> Dict[str, Any]:
+    """Create a composition result dictionary."""
     result = {
         "status": "success",
         "preset": preset,
@@ -122,13 +125,13 @@ def _composition_result(
     result.update(extra)
     return result
 
-
 def compose_product_shot(params: Dict[str, Any]) -> Dict[str, Any]:
+    """Compose a product shot."""
     scene = _get_scene()
     product_name = str(params.get("product_name", "Product"))
     style = str(params.get("style", "clean")).lower()
     if style not in _PRODUCT_STYLES:
-        raise ValueError(f"Unsupported product style: {style}")
+        raise BlenderMCPError(f"Unsupported product style: {style}")
 
     background = _set_world_background(scene, str(params.get("background", "white")))
     camera_object = _ensure_camera_object(f"{product_name} Camera")
@@ -137,6 +140,7 @@ def compose_product_shot(params: Dict[str, Any]) -> Dict[str, Any]:
     camera_object.data.type = "PERSP"
     camera_object.data.lens = lens
     _activate_camera(scene, camera_object)
+    logger.info("Composed product shot", product_name=product_name, style=style)
     return _composition_result(
         "product_shot",
         camera_object,
@@ -148,8 +152,8 @@ def compose_product_shot(params: Dict[str, Any]) -> Dict[str, Any]:
         },
     )
 
-
 def compose_isometric_scene(params: Dict[str, Any]) -> Dict[str, Any]:
+    """Compose an isometric scene."""
     scene = _get_scene()
     grid_size = float(params.get("grid_size", 10.0))
     if grid_size <= 0.0:
@@ -164,6 +168,7 @@ def compose_isometric_scene(params: Dict[str, Any]) -> Dict[str, Any]:
         [math.radians(35.264), 0.0, math.radians(45.0)],
     )
     _activate_camera(scene, camera_object)
+    logger.info("Composed isometric scene", grid_size=grid_size)
     return _composition_result(
         "isometric",
         camera_object,
@@ -175,19 +180,22 @@ def compose_isometric_scene(params: Dict[str, Any]) -> Dict[str, Any]:
         },
     )
 
-
 def compose_character_scene(params: Dict[str, Any]) -> Dict[str, Any]:
+    """Compose a character scene."""
     scene = _get_scene()
     character_name = str(params.get("character_name", "Character"))
     environment = str(params.get("environment", "studio")).lower()
     if environment not in _CHARACTER_ENVIRONMENTS:
-        raise ValueError(f"Unsupported character environment: {environment}")
+        raise BlenderMCPError(f"Unsupported character environment: {environment}")
 
     camera_object = _ensure_camera_object(f"{character_name} Camera")
     _apply_camera(camera_object, [0.0, -6.0, 2.4], [math.radians(74.0), 0.0, 0.0])
     camera_object.data.type = "PERSP"
     camera_object.data.lens = 70.0
     _activate_camera(scene, camera_object)
+    logger.info(
+        "Composed character scene", character_name=character_name, environment=environment
+    )
     return _composition_result(
         "character",
         camera_object,
@@ -199,16 +207,16 @@ def compose_character_scene(params: Dict[str, Any]) -> Dict[str, Any]:
         },
     )
 
-
 def compose_automotive_shot(params: Dict[str, Any]) -> Dict[str, Any]:
+    """Compose an automotive shot."""
     scene = _get_scene()
     car_name = str(params.get("car_name", "Car"))
     angle = str(params.get("angle", "three_quarter")).lower()
     environment = str(params.get("environment", "studio")).lower()
     if angle not in _AUTOMOTIVE_ANGLES:
-        raise ValueError(f"Unsupported automotive angle: {angle}")
+        raise BlenderMCPError(f"Unsupported automotive angle: {angle}")
     if environment not in _AUTOMOTIVE_ENVIRONMENTS:
-        raise ValueError(f"Unsupported automotive environment: {environment}")
+        raise BlenderMCPError(f"Unsupported automotive environment: {environment}")
 
     location_map = {
         "front": [0.0, -9.0, 2.5],
@@ -229,6 +237,9 @@ def compose_automotive_shot(params: Dict[str, Any]) -> Dict[str, Any]:
     camera_object.data.type = "PERSP"
     camera_object.data.lens = 50.0 if angle == "top" else 70.0
     _activate_camera(scene, camera_object)
+    logger.info(
+        "Composed automotive shot", car_name=car_name, angle=angle, environment=environment
+    )
     return _composition_result(
         "automotive",
         camera_object,
@@ -240,12 +251,12 @@ def compose_automotive_shot(params: Dict[str, Any]) -> Dict[str, Any]:
         },
     )
 
-
 def compose_food_shot(params: Dict[str, Any]) -> Dict[str, Any]:
+    """Compose a food shot."""
     scene = _get_scene()
     style = str(params.get("style", "flat_lay")).lower()
     if style not in _FOOD_STYLES:
-        raise ValueError(f"Unsupported food style: {style}")
+        raise BlenderMCPError(f"Unsupported food style: {style}")
 
     camera_object = _ensure_camera_object("Food Camera")
     if style == "flat_lay":
@@ -259,24 +270,26 @@ def compose_food_shot(params: Dict[str, Any]) -> Dict[str, Any]:
         camera_object.data.lens = 80.0
     camera_object.data.type = "PERSP"
     _activate_camera(scene, camera_object)
+    logger.info("Composed food shot", style=style)
     return _composition_result(
         "food",
         camera_object,
         {"style": style, "lens": camera_object.data.lens},
     )
 
-
 def compose_jewelry_shot(params: Dict[str, Any]) -> Dict[str, Any]:
+    """Compose a jewelry shot."""
     scene = _get_scene()
     style = str(params.get("style", "macro")).lower()
     if style not in _JEWELRY_STYLES:
-        raise ValueError(f"Unsupported jewelry style: {style}")
+        raise BlenderMCPError(f"Unsupported jewelry style: {style}")
 
     camera_object = _ensure_camera_object("Jewelry Camera")
     _apply_camera(camera_object, [0.0, -2.5, 1.4], [math.radians(76.0), 0.0, 0.0])
     camera_object.data.type = "PERSP"
     camera_object.data.lens = 105.0
     _activate_camera(scene, camera_object)
+    logger.info("Composed jewelry shot", style=style)
     return _composition_result(
         "jewelry",
         camera_object,
@@ -287,8 +300,8 @@ def compose_jewelry_shot(params: Dict[str, Any]) -> Dict[str, Any]:
         },
     )
 
-
 def compose_architectural_shot(params: Dict[str, Any]) -> Dict[str, Any]:
+    """Compose an architectural shot."""
     scene = _get_scene()
     interior = bool(params.get("interior", False))
     natural_light = bool(params.get("natural_light", True))
@@ -306,6 +319,9 @@ def compose_architectural_shot(params: Dict[str, Any]) -> Dict[str, Any]:
         camera_object.data.lens = 35.0
     camera_object.data.type = "PERSP"
     _activate_camera(scene, camera_object)
+    logger.info(
+        "Composed architectural shot", interior=interior, natural_light=natural_light
+    )
     return _composition_result(
         "architectural",
         camera_object,
@@ -316,13 +332,13 @@ def compose_architectural_shot(params: Dict[str, Any]) -> Dict[str, Any]:
         },
     )
 
-
 def compose_studio_setup(params: Dict[str, Any]) -> Dict[str, Any]:
+    """Compose a studio setup."""
     scene = _get_scene()
     subject_type = str(params.get("subject_type", "generic"))
     mood = str(params.get("mood", "neutral")).lower()
     if mood not in _STUDIO_MOODS:
-        raise ValueError(f"Unsupported studio mood: {mood}")
+        raise BlenderMCPError(f"Unsupported studio mood: {mood}")
 
     camera_object = _ensure_camera_object(f"{subject_type.title()} Studio Camera")
     mood_offsets = {
@@ -336,14 +352,15 @@ def compose_studio_setup(params: Dict[str, Any]) -> Dict[str, Any]:
     camera_object.data.type = "PERSP"
     camera_object.data.lens = 80.0
     _activate_camera(scene, camera_object)
+    logger.info("Composed studio setup", subject_type=subject_type, mood=mood)
     return _composition_result(
         "studio",
         camera_object,
         {"subject_type": subject_type, "mood": mood, "lens": 80.0},
     )
 
-
-def _remove_from_scene_lists(scene, obj) -> None:
+def _remove_from_scene_lists(scene: Any, obj: Any) -> None:
+    """Remove an object from the scene lists."""
     scene_objects = getattr(scene, "objects", None)
     if isinstance(scene_objects, list) and obj in scene_objects:
         scene_objects.remove(obj)
@@ -353,8 +370,8 @@ def _remove_from_scene_lists(scene, obj) -> None:
     if isinstance(linked, list) and obj in linked:
         linked.remove(obj)
 
-
 def clear_scene(params: Dict[str, Any]) -> Dict[str, Any]:
+    """Clear the scene of objects."""
     scene = _get_scene()
     keep_camera = bool(params.get("keep_camera", False))
     keep_lights = bool(params.get("keep_lights", False))
@@ -377,6 +394,7 @@ def clear_scene(params: Dict[str, Any]) -> Dict[str, Any]:
     if not keep_camera and getattr(scene, "camera", None) is not None:
         scene.camera = None
 
+    logger.info("Cleared scene", removed_count=len(removed_names), kept_count=len(kept_names))
     return {
         "status": "success",
         "removed": removed_names,
@@ -384,12 +402,12 @@ def clear_scene(params: Dict[str, Any]) -> Dict[str, Any]:
         "kept": kept_names,
     }
 
-
 def setup_render_settings(params: Dict[str, Any]) -> Dict[str, Any]:
+    """Setup the render settings for the scene."""
     scene = _get_scene()
     render = getattr(scene, "render", None)
     if render is None:
-        raise ValueError("Scene render settings are unavailable")
+        raise BlenderMCPError("Scene render settings are unavailable")
 
     engine_input = str(params.get("engine", "CYCLES")).upper()
     engine_map = {
@@ -399,7 +417,7 @@ def setup_render_settings(params: Dict[str, Any]) -> Dict[str, Any]:
         "BLENDER_EEVEE_NEXT": "BLENDER_EEVEE_NEXT",
     }
     if engine_input not in engine_map:
-        raise ValueError(f"Unsupported render engine: {engine_input}")
+        raise BlenderMCPError(f"Unsupported render engine: {engine_input}")
 
     samples = int(params.get("samples", 128))
     resolution_x = int(params.get("resolution_x", 1920))
@@ -426,6 +444,7 @@ def setup_render_settings(params: Dict[str, Any]) -> Dict[str, Any]:
         if eevee is not None and hasattr(eevee, "taa_render_samples"):
             eevee.taa_render_samples = samples
 
+    logger.info("Set up render settings", engine=normalized_engine, samples=samples)
     return {
         "status": "success",
         "engine": "EEVEE"

@@ -5,7 +5,9 @@ from __future__ import annotations
 from typing import Any, Dict, Optional
 
 import bpy
+import structlog
 
+from ...exceptions import BlenderMCPError
 from .jobs_common import (
     build_import_response,
     build_job_snapshot,
@@ -14,20 +16,21 @@ from .jobs_common import (
     ensure_completed_job,
 )
 
+logger = structlog.get_logger(__name__)
 
 _jobs: Dict[str, Dict[str, Any]] = {}
 
-
 def _normalize_optional_string(value: Any) -> Optional[str]:
+    """Normalize an optional string value."""
     if not isinstance(value, str):
         return None
     normalized_value = value.strip()
     return normalized_value or None
 
-
 def _build_generation_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """Build a generation payload."""
     if not isinstance(payload, dict):
-        raise ValueError("payload must be an object")
+        raise BlenderMCPError("payload must be an object")
 
     normalized_payload: Dict[str, Any] = {}
     text_prompt = _normalize_optional_string(payload.get("text_prompt"))
@@ -38,17 +41,16 @@ def _build_generation_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
     if input_image_url is not None:
         normalized_payload["input_image_url"] = input_image_url
     if not normalized_payload:
-        raise ValueError("text_prompt or input_image_url is required")
+        raise BlenderMCPError("text_prompt or input_image_url is required")
 
     return normalized_payload
 
-
 def _get_settings() -> Any:
+    """Get the addon settings."""
     scene = getattr(bpy.context, "scene", None)
     if scene is None:
         return None
     return getattr(scene, "blendermcp_settings", None)
-
 
 def get_status() -> Dict[str, Any]:
     """Get Hunyuan3D integration status."""
@@ -57,6 +59,7 @@ def get_status() -> Dict[str, Any]:
     mode = getattr(settings, "hunyuan3d_mode", "official")
     api_key = getattr(settings, "hunyuan3d_api_key", None)
     local_path = getattr(settings, "hunyuan3d_local_path", None)
+    logger.info("Getting Hunyuan3D status", enabled=enabled, mode=mode)
     return {
         "enabled": enabled,
         "mode": mode,
@@ -66,17 +69,16 @@ def get_status() -> Dict[str, Any]:
         "api_available": enabled,
     }
 
-
 def create_job(payload: Dict[str, Any]) -> Dict[str, Any]:
     """Create a new Hunyuan3D generation job."""
     normalized_payload = _build_generation_payload(payload)
     job = create_job_record(_jobs, "hunyuan3d", normalized_payload, status="pending")
+    logger.info("Created Hunyuan3D job", job_id=job["job_id"])
     return {
         "job_id": job["job_id"],
         "provider": job["provider"],
         "status": job["status"],
     }
-
 
 def get_job(params: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """Get job status."""
@@ -85,13 +87,12 @@ def get_job(params: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         return None
     return build_job_snapshot(job)
 
-
 def generate_model(params: Dict[str, Any]) -> Dict[str, Any]:
     """Generate a model from text or image guidance."""
     text_prompt = params.get("text_prompt")
     input_image_url = params.get("input_image_url")
     if not text_prompt and not input_image_url:
-        raise ValueError("text_prompt or input_image_url is required")
+        raise BlenderMCPError("text_prompt or input_image_url is required")
 
     payload: Dict[str, Any] = {}
     if text_prompt:
@@ -106,13 +107,12 @@ def generate_model(params: Dict[str, Any]) -> Dict[str, Any]:
         "message": "Generation job created",
     }
 
-
 def poll_job_status(params: Dict[str, Any]) -> Dict[str, Any]:
     """Poll a Hunyuan3D job status."""
     job_id = params.get("job_id")
     job = _jobs.get(job_id)
     if job is None:
-        raise ValueError(f"Job not found: {job_id}")
+        raise BlenderMCPError(f"Job not found: {job_id}")
 
     if job["status"] == "pending":
         result = {
@@ -129,18 +129,19 @@ def poll_job_status(params: Dict[str, Any]) -> Dict[str, Any]:
 
     response = build_job_snapshot(job)
     response.update(job["result"] or {})
+    logger.info("Polled Hunyuan3D job status", job_id=job_id, status=job["status"])
     return response
-
 
 def import_asset(params: Dict[str, Any]) -> Dict[str, Any]:
     """Import a generated Hunyuan3D asset."""
     name = params.get("name")
     zip_file_url = params.get("zip_file_url")
     if not name:
-        raise ValueError("name is required")
+        raise BlenderMCPError("name is required")
     if not zip_file_url:
-        raise ValueError("zip_file_url is required")
+        raise BlenderMCPError("zip_file_url is required")
 
+    logger.info("Importing Hunyuan3D asset", name=name, zip_file_url=zip_file_url)
     return build_import_response(
         "hunyuan3d",
         name,
@@ -148,19 +149,19 @@ def import_asset(params: Dict[str, Any]) -> Dict[str, Any]:
         metadata={"zip_file_url": zip_file_url},
     )
 
-
 def import_job_result(params: Dict[str, Any]) -> Dict[str, Any]:
     """Import the result of a completed Hunyuan3D job."""
     job_id = params.get("job_id")
     name = params.get("name")
     if not job_id:
-        raise ValueError("job_id is required")
+        raise BlenderMCPError("job_id is required")
     if not name:
-        raise ValueError("name is required")
+        raise BlenderMCPError("name is required")
 
     job = _jobs.get(job_id)
     result = ensure_completed_job(job, job_id)
     zip_file_url = result.get("zip_file_url") or result.get("ResultFile3Ds")
+    logger.info("Importing Hunyuan3D job result", job_id=job_id, name=name)
     return build_import_response(
         "hunyuan3d",
         name,

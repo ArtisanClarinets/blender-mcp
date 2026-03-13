@@ -1,5 +1,4 @@
-"""
-Shared helpers for async job handler modules.
+"""Shared helpers for async job handler modules.
 
 These helpers keep provider-specific handlers small and consistent while
 remaining adapter-friendly for mocked or deferred provider integrations.
@@ -8,14 +7,18 @@ remaining adapter-friendly for mocked or deferred provider integrations.
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any, Dict, MutableMapping
+from typing import Any, Dict, MutableMapping, Optional
 import uuid
 
+import structlog
+
+from ...exceptions import BlenderMCPError
+
+logger = structlog.get_logger(__name__)
 
 def utc_now_iso() -> str:
     """Return the current UTC timestamp in ISO format."""
     return datetime.now(timezone.utc).isoformat()
-
 
 def create_job_record(
     store: MutableMapping[str, Dict[str, Any]],
@@ -25,11 +28,11 @@ def create_job_record(
     status: str = "pending",
     progress: float = 0.0,
     message: str = "Job created",
-    external_id: str | None = None,
+    external_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Create and persist a normalized job record."""
     if not isinstance(payload, dict):
-        raise ValueError("payload must be an object")
+        raise BlenderMCPError("payload must be an object")
 
     job_id = f"job_{uuid.uuid4().hex[:12]}"
     timestamp = utc_now_iso()
@@ -49,18 +52,18 @@ def create_job_record(
         job["external_id"] = external_id
 
     store[job_id] = job
+    logger.info("Created job record", job_id=job_id, provider=provider)
     return job
-
 
 def update_job_record(job: Dict[str, Any], **fields: Any) -> Dict[str, Any]:
     """Update a job record and refresh its timestamp."""
     if not job:
-        raise ValueError("job is required")
+        raise BlenderMCPError("job is required")
 
     job.update(fields)
     job["updated_at"] = utc_now_iso()
+    logger.info("Updated job record", job_id=job.get("job_id"))
     return job
-
 
 def complete_job_record(
     job: Dict[str, Any],
@@ -72,8 +75,9 @@ def complete_job_record(
 ) -> Dict[str, Any]:
     """Mark a job as completed with a result payload."""
     if not isinstance(result, dict):
-        raise ValueError("result must be an object")
+        raise BlenderMCPError("result must be an object")
 
+    logger.info("Completing job record", job_id=job.get("job_id"))
     return update_job_record(
         job,
         status=status,
@@ -83,40 +87,37 @@ def complete_job_record(
         error=None,
     )
 
-
 def build_job_snapshot(job: Dict[str, Any]) -> Dict[str, Any]:
     """Return a shallow copy suitable for responses."""
     if not job:
-        raise ValueError("job is required")
+        raise BlenderMCPError("job is required")
     return dict(job)
-
 
 def ensure_completed_job(job: Dict[str, Any], job_id: str) -> Dict[str, Any]:
     """Validate that a job exists and completed successfully."""
     if not job:
-        raise ValueError(f"Job not found: {job_id}")
+        raise BlenderMCPError(f"Job not found: {job_id}")
 
     if job.get("status") not in {"completed", "COMPLETED", "DONE"}:
-        raise ValueError(
+        raise BlenderMCPError(
             f"Job is not completed. Current status: {job.get('status', 'unknown')}"
         )
 
     result = job.get("result")
     if not isinstance(result, dict):
-        raise ValueError(f"Job result unavailable: {job_id}")
+        raise BlenderMCPError(f"Job result unavailable: {job_id}")
 
     return result
-
 
 def build_import_response(
     provider: str,
     name: str,
     *,
-    job_id: str | None = None,
-    source: str | None = None,
-    target_size: float | None = None,
-    imported_objects: list[str] | None = None,
-    metadata: Dict[str, Any] | None = None,
+    job_id: Optional[str] = None,
+    source: Optional[str] = None,
+    target_size: Optional[float] = None,
+    imported_objects: Optional[list[str]] = None,
+    metadata: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Build a normalized import response."""
     response: Dict[str, Any] = {
@@ -135,4 +136,6 @@ def build_import_response(
         response["target_size"] = float(target_size)
     if metadata:
         response.update(metadata)
+
+    logger.info("Built import response", name=name, provider=provider)
     return response

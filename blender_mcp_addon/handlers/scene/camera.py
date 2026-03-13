@@ -1,5 +1,4 @@
-"""
-Camera handlers for Blender MCP addon.
+"""Camera handlers for Blender MCP addon.
 
 Implements focused camera creation, presets, and framing operations.
 """
@@ -8,14 +7,18 @@ import math
 from typing import Any, Dict, List, Optional
 
 import bpy
+import structlog
+
+from ...exceptions import BlenderMCPError
 
 try:
     import mathutils
-except ImportError:  # pragma: no cover - Blender provides mathutils at runtime.
+except ImportError:
     mathutils = None
 
+logger = structlog.get_logger(__name__)
 
-_COMPOSITION_OFFSETS = {
+_COMPOSITION_OFFSETS: Dict[str, List[float]] = {
     "center": [0.0, 0.0, 0.0],
     "rule_of_thirds": [0.33, 0.0, 0.2],
     "golden_ratio": [0.38, 0.0, 0.24],
@@ -23,7 +26,7 @@ _COMPOSITION_OFFSETS = {
     "frame": [0.6, 0.0, 0.0],
 }
 
-_CAMERA_PRESETS = {
+_CAMERA_PRESETS: Dict[str, Dict[str, float]] = {
     "portrait": {"lens": 85.0, "aperture": 2.8},
     "landscape": {"lens": 35.0, "aperture": 11.0},
     "macro": {"lens": 100.0, "aperture": 16.0},
@@ -33,47 +36,54 @@ _CAMERA_PRESETS = {
     "product": {"lens": 50.0, "aperture": 8.0},
 }
 
-
 def _normalize_vector(value: List[float], field_name: str) -> List[float]:
+    """Normalize a vector to a list of 3 floats."""
     if len(value) != 3:
         raise ValueError(f"{field_name} must contain exactly 3 values")
     return [float(component) for component in value]
 
-
-def _get_active_scene_objects():
+def _get_active_scene_objects() -> Any:
+    """Get the objects in the active scene."""
     scene = getattr(bpy.context, "scene", None)
+    if scene is None:
+        raise BlenderMCPError("No active scene")
     scene_objects = getattr(scene, "objects", None)
     if scene_objects is not None:
         return scene_objects
 
     collection = getattr(scene, "collection", None)
+    if collection is None:
+        raise BlenderMCPError("No active collection in scene")
     collection_objects = getattr(collection, "objects", None)
     if collection_objects is not None:
         return collection_objects
 
     return []
 
-
-def _get_collection_for_linking():
+def _get_collection_for_linking() -> Any:
+    """Get the collection to link new objects to."""
     collection = getattr(bpy.context, "collection", None)
     if collection is not None and getattr(collection, "objects", None) is not None:
         return collection
 
-    scene_collection = getattr(getattr(bpy.context, "scene", None), "collection", None)
+    scene = getattr(bpy.context, "scene", None)
+    if scene is None:
+        raise BlenderMCPError("No active scene")
+    scene_collection = getattr(scene, "collection", None)
     if (
         scene_collection is not None
         and getattr(scene_collection, "objects", None) is not None
     ):
         return scene_collection
 
-    raise ValueError("No active collection available to link new camera")
+    raise BlenderMCPError("No active collection available to link new camera")
 
-
-def _ensure_camera_object(name: str):
+def _ensure_camera_object(name: str) -> Any:
+    """Ensure a camera object with the given name exists."""
     existing_object = bpy.data.objects.get(name)
     if existing_object is not None:
         if getattr(existing_object, "type", None) != "CAMERA":
-            raise ValueError(f"Object exists and is not a camera: {name}")
+            raise BlenderMCPError(f"Object exists and is not a camera: {name}")
         return existing_object
 
     camera_data = bpy.data.cameras.new(name=name)
@@ -81,15 +91,15 @@ def _ensure_camera_object(name: str):
     _get_collection_for_linking().objects.link(camera_object)
     return camera_object
 
-
-def _get_camera_object(camera_name: str):
-    camera_object = bpy.data.objects.get(camera_name)
+def _get_camera_object(camer-name: str) -> Any:
+    """Get a camera object by name."""
+    camera_object = bpy.data.objects.get(camer-name)
     if camera_object is None or getattr(camera_object, "type", None) != "CAMERA":
-        raise ValueError(f"Camera not found: {camera_name}")
+        raise BlenderMCPError(f"Camera not found: {camer-name}")
     return camera_object
 
-
 def _look_at_rotation(location: List[float], target: List[float]) -> List[float]:
+    """Calculate the rotation to look at a target."""
     if mathutils is not None:
         direction = mathutils.Vector(target) - mathutils.Vector(location)
         return list(direction.to_track_quat("-Z", "Y").to_euler())
@@ -102,15 +112,15 @@ def _look_at_rotation(location: List[float], target: List[float]) -> List[float]
     yaw = math.atan2(dx, -dy)
     return [pitch, 0.0, yaw]
 
-
-def _set_camera_look_at(camera_object, target: List[float]) -> None:
+def _set_camera_look_at(camera_object: Any, target: List[float]) -> None:
+    """Set the camera to look at a target."""
     camera_object.rotation_euler = _look_at_rotation(
         list(camera_object.location),
         target,
     )
 
-
-def _get_selected_scene_objects():
+def _get_selected_scene_objects() -> List[Any]:
+    """Get the selected objects in the scene."""
     selected_objects = getattr(bpy.context, "selected_objects", None)
     if selected_objects is not None:
         return list(selected_objects)
@@ -126,15 +136,15 @@ def _get_selected_scene_objects():
             scene_objects.append(obj)
     return scene_objects
 
-
-def _coerce_dimensions(obj) -> List[float]:
+def _coerce_dimensions(obj: Any) -> List[float]:
+    """Coerce an object's dimensions to a list of floats."""
     dimensions = getattr(obj, "dimensions", None)
     if dimensions is None:
         return [0.0, 0.0, 0.0]
     return [float(component) for component in dimensions]
 
-
 def _coerce_point3(value: Any) -> Optional[List[float]]:
+    """Coerce a value to a 3D point."""
     try:
         components = list(value)
     except TypeError:
@@ -145,10 +155,10 @@ def _coerce_point3(value: Any) -> Optional[List[float]]:
 
     return [float(components[index]) for index in range(3)]
 
-
 def _transform_bound_box_corner(
     matrix_world: Any, corner: List[float]
 ) -> Optional[List[float]]:
+    """Transform a bounding box corner."""
     if matrix_world is None:
         return None
 
@@ -174,8 +184,8 @@ def _transform_bound_box_corner(
 
     return None
 
-
-def _object_bounds(obj) -> Optional[Dict[str, List[float]]]:
+def _object_bounds(obj: Any) -> Optional[Dict[str, List[float]]]:
+    """Get the bounds of an object."""
     bound_box = getattr(obj, "bound_box", None)
     if bound_box is None:
         return None
@@ -202,10 +212,10 @@ def _object_bounds(obj) -> Optional[Dict[str, List[float]]]:
     size = [max_corner[index] - min_corner[index] for index in range(3)]
     return {"center": center, "size": size}
 
-
-def _selection_bounds(selected_objects) -> Dict[str, List[float]]:
+def _selection_bounds(selected_objects: List[Any]) -> Dict[str, List[float]]:
+    """Get the bounds of the selection."""
     if not selected_objects:
-        raise ValueError("No selected objects to frame")
+        raise BlenderMCPError("No selected objects to frame")
 
     min_corner = [float("inf"), float("inf"), float("inf")]
     max_corner = [float("-inf"), float("-inf"), float("-inf")]
@@ -229,8 +239,8 @@ def _selection_bounds(selected_objects) -> Dict[str, List[float]]:
     size = [max_corner[index] - min_corner[index] for index in range(3)]
     return {"center": center, "size": size}
 
-
-def _describe_camera(camera_object) -> Dict[str, Any]:
+def _describe_camera(camera_object: Any) -> Dict[str, Any]:
+    """Describe a camera object."""
     camera_data = getattr(camera_object, "data", None)
     active_camera = getattr(getattr(bpy.context, "scene", None), "camera", None)
     dof_settings = getattr(camera_data, "dof", None)
@@ -244,14 +254,13 @@ def _describe_camera(camera_object) -> Dict[str, Any]:
         "focus_distance": float(getattr(dof_settings, "focus_distance", 0.0)),
     }
 
-
 def create_composition_camera(params: Dict[str, Any]) -> Dict[str, Any]:
     """Create or replace a camera tuned for a composition pattern."""
     name = str(params.get("name", "Camera"))
     composition = str(params.get("composition", "center")).lower()
     focal_length = float(params.get("focal_length", 50.0))
     if composition not in _COMPOSITION_OFFSETS:
-        raise ValueError(f"Unsupported composition: {composition}")
+        raise BlenderMCPError(f"Unsupported composition: {composition}")
 
     location = _normalize_vector(params.get("location", [0.0, -6.0, 3.0]), "location")
     target = _normalize_vector(params.get("target", [0.0, 0.0, 1.0]), "target")
@@ -264,13 +273,13 @@ def create_composition_camera(params: Dict[str, Any]) -> Dict[str, Any]:
     camera_object.data.lens = focal_length
     _set_camera_look_at(camera_object, framed_target)
 
+    logger.info("Created composition camera", name=name, composition=composition)
     return {
         "status": "success",
         "name": camera_object.name,
         "composition": composition,
         "lens": camera_object.data.lens,
     }
-
 
 def create_isometric_camera(params: Dict[str, Any]) -> Dict[str, Any]:
     """Create or replace an isometric orthographic camera."""
@@ -284,6 +293,7 @@ def create_isometric_camera(params: Dict[str, Any]) -> Dict[str, Any]:
     camera_object.location = [10.0, -10.0, 10.0]
     camera_object.rotation_euler = [math.radians(angle), 0.0, math.radians(45.0)]
 
+    logger.info("Created isometric camera", name=name)
     return {
         "status": "success",
         "name": camera_object.name,
@@ -292,14 +302,13 @@ def create_isometric_camera(params: Dict[str, Any]) -> Dict[str, Any]:
         "angle": angle,
     }
 
-
 def set_camera_depth_of_field(params: Dict[str, Any]) -> Dict[str, Any]:
     """Apply depth-of-field settings to a camera."""
-    camera_name = params.get("camera_name")
-    if not camera_name:
-        raise ValueError("camera_name is required")
+    camer-name = params.get("camer-name")
+    if not camer-name:
+        raise BlenderMCPError("camer-name is required")
 
-    camera_object = _get_camera_object(str(camera_name))
+    camera_object = _get_camera_object(str(camer-name))
     aperture = float(params.get("aperture", 5.6))
     focus_distance = float(params.get("focus_distance", 10.0))
     focal_length = params.get("focal_length")
@@ -310,6 +319,7 @@ def set_camera_depth_of_field(params: Dict[str, Any]) -> Dict[str, Any]:
     if focal_length is not None:
         camera_object.data.lens = float(focal_length)
 
+    logger.info("Set camera depth of field", camer-name=camer-name)
     return {
         "status": "success",
         "camera": camera_object.name,
@@ -318,25 +328,25 @@ def set_camera_depth_of_field(params: Dict[str, Any]) -> Dict[str, Any]:
         "lens": camera_object.data.lens,
     }
 
-
 def apply_camera_preset(params: Dict[str, Any]) -> Dict[str, Any]:
     """Apply a named camera preset."""
-    camera_name = params.get("camera_name")
+    camer-name = params.get("camer-name")
     preset = str(params.get("preset", "")).lower()
-    if not camera_name:
-        raise ValueError("camera_name is required")
+    if not camer-name:
+        raise BlenderMCPError("camer-name is required")
     if not preset:
-        raise ValueError("preset is required")
+        raise BlenderMCPError("preset is required")
 
     preset_settings = _CAMERA_PRESETS.get(preset)
     if preset_settings is None:
-        raise ValueError(f"Unsupported camera preset: {preset}")
+        raise BlenderMCPError(f"Unsupported camera preset: {preset}")
 
-    camera_object = _get_camera_object(str(camera_name))
+    camera_object = _get_camera_object(str(camer-name))
     camera_object.data.lens = float(preset_settings["lens"])
     camera_object.data.dof.use_dof = True
     camera_object.data.dof.aperture_fstop = float(preset_settings["aperture"])
 
+    logger.info("Applied camera preset", camer-name=camer-name, preset=preset)
     return {
         "status": "success",
         "camera": camera_object.name,
@@ -345,17 +355,16 @@ def apply_camera_preset(params: Dict[str, Any]) -> Dict[str, Any]:
         "aperture": camera_object.data.dof.aperture_fstop,
     }
 
-
 def set_active_camera(params: Dict[str, Any]) -> Dict[str, Any]:
     """Set the active scene camera."""
-    camera_name = params.get("camera_name")
-    if not camera_name:
-        raise ValueError("camera_name is required")
+    camer-name = params.get("camer-name")
+    if not camer-name:
+        raise BlenderMCPError("camer-name is required")
 
-    camera_object = _get_camera_object(str(camera_name))
+    camera_object = _get_camera_object(str(camer-name))
     bpy.context.scene.camera = camera_object
+    logger.info("Set active camera", camer-name=camer-name)
     return {"status": "success", "active_camera": camera_object.name}
-
 
 def list_cameras() -> Dict[str, Any]:
     """List cameras in the active scene."""
@@ -371,14 +380,13 @@ def list_cameras() -> Dict[str, Any]:
         "active_camera": getattr(active_camera, "name", None),
     }
 
-
 def frame_camera_to_selection(params: Dict[str, Any]) -> Dict[str, Any]:
     """Move the camera to frame the current selection."""
-    camera_name = params.get("camera_name")
-    if not camera_name:
-        raise ValueError("camera_name is required")
+    camer-name = params.get("camer-name")
+    if not camer-name:
+        raise BlenderMCPError("camer-name is required")
 
-    camera_object = _get_camera_object(str(camera_name))
+    camera_object = _get_camera_object(str(camer-name))
     margin = float(params.get("margin", 1.1))
     if margin <= 0.0:
         raise ValueError("margin must be greater than 0")
@@ -396,6 +404,7 @@ def frame_camera_to_selection(params: Dict[str, Any]) -> Dict[str, Any]:
     if getattr(camera_object.data, "type", "PERSP") == "ORTHO":
         camera_object.data.ortho_scale = max_dimension * margin
 
+    logger.info("Framed camera to selection", camer-name=camer-name)
     return {
         "status": "success",
         "camera": camera_object.name,

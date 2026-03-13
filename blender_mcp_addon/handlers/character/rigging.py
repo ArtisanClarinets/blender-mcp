@@ -1,5 +1,4 @@
-"""
-Rigging handlers for Blender MCP addon.
+"""Rigging handlers for Blender MCP addon.
 
 Implements automated rigging solutions for bipeds, quadrupeds, and custom creatures.
 """
@@ -8,12 +7,15 @@ import math
 from typing import Any, Dict, List, Optional
 
 import bpy
+import structlog
 from bpy import context as bpy_context
-from mathutils import Vector, Matrix
+from mathutils import Vector
 
+from ...exceptions import BlenderMCPError
 
-# Standard bone templates
-BIPED_TEMPLATE = {
+logger = structlog.get_logger(__name__)
+
+BIPED_TEMPLATE: Dict[str, List[str]] = {
     "spine": ["hips", "spine", "chest", "neck", "head"],
     "left_arm": ["shoulder.L", "upper_arm.L", "forearm.L", "hand.L"],
     "right_arm": ["shoulder.R", "upper_arm.R", "forearm.R", "hand.R"],
@@ -21,7 +23,7 @@ BIPED_TEMPLATE = {
     "right_leg": ["thigh.R", "shin.R", "foot.R", "toe.R"],
 }
 
-QUADRUPED_TEMPLATE = {
+QUADRUPED_TEMPLATE: Dict[str, List[str]] = {
     "spine": ["hips", "spine.01", "spine.02", "spine.03", "chest", "neck", "head"],
     "front_left_leg": ["front_thigh.L", "front_shin.L", "front_foot.L", "front_toe.L"],
     "front_right_leg": ["front_thigh.R", "front_shin.R", "front_foot.R", "front_toe.R"],
@@ -30,12 +32,9 @@ QUADRUPED_TEMPLATE = {
     "tail": ["tail.01", "tail.02", "tail.03"],
 }
 
-
 def _resolve_object(name: str) -> Optional[bpy.types.Object]:
     """Resolve an object by name or return None."""
-    obj = bpy.data.objects.get(name)
-    return obj
-
+    return bpy.data.objects.get(name)
 
 def _create_armature(name: str) -> bpy.types.Object:
     """Create a new armature object."""
@@ -43,7 +42,6 @@ def _create_armature(name: str) -> bpy.types.Object:
     armature_obj = bpy.data.objects.new(name, armature_data)
     bpy_context.collection.objects.link(armature_obj)
     return armature_obj
-
 
 def _add_bone(
     armature: bpy.types.Object,
@@ -67,31 +65,19 @@ def _add_bone(
 
     return bone
 
-
 def _get_bone_chain_length(mesh: bpy.types.Object, axis: str = "Z") -> float:
     """Estimate the length of the mesh along an axis for bone sizing."""
     if not mesh or mesh.type != "MESH":
         return 1.0
 
-    # Get bounding box
     bbox = [mesh.matrix_world @ Vector(corner) for corner in mesh.bound_box]
     min_coord = min(bbox, key=lambda v: getattr(v, axis.lower()))
     max_coord = max(bbox, key=lambda v: getattr(v, axis.lower()))
 
     return (max_coord - min_coord).length
 
-
 def create_auto_rig(params: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Create an automated rig for a character mesh.
-
-    Parameters:
-    - character_name: Name of the character mesh
-    - rig_type: Type of rig ("biped", "quadruped", "creature")
-    - skeleton_template: Optional custom skeleton template
-    - ik_fk_switch: Enable IK/FK switching
-    - facial_rig: Include facial rigging
-    """
+    """Create an automated rig for a character mesh."""
     character_name = params.get("character_name")
     rig_type = params.get("rig_type", "biped")
     skeleton_template = params.get("skeleton_template")
@@ -99,17 +85,15 @@ def create_auto_rig(params: Dict[str, Any]) -> Dict[str, Any]:
     facial_rig = params.get("facial_rig", False)
 
     if not character_name:
-        raise ValueError("character_name is required")
+        raise BlenderMCPError("character_name is required")
 
     character = _resolve_object(character_name)
     if character is None:
-        raise ValueError(f"Character mesh not found: {character_name}")
+        raise BlenderMCPError(f"Character mesh not found: {character_name}")
 
-    # Create armature
     rig_name = f"{character_name}_rig"
     armature = _create_armature(rig_name)
 
-    # Select template based on rig type
     if skeleton_template:
         template = skeleton_template
     elif rig_type == "biped":
@@ -117,33 +101,28 @@ def create_auto_rig(params: Dict[str, Any]) -> Dict[str, Any]:
     elif rig_type == "quadruped":
         template = QUADRUPED_TEMPLATE
     else:
-        template = BIPED_TEMPLATE  # Default fallback
+        template = BIPED_TEMPLATE
 
-    # Get mesh dimensions for bone sizing
     height = _get_bone_chain_length(character, "Z")
     width = _get_bone_chain_length(character, "X")
 
     bones_created = []
     bone_count = 0
 
-    # Create bones based on template
     for chain_name, bone_names in template.items():
-        chain_bones = []
         prev_bone = None
 
         for i, bone_name in enumerate(bone_names):
-            # Calculate bone position (simplified positioning)
             head_z = height * (1.0 - (i / (len(bone_names) + 1)))
             tail_z = head_z - (height / (len(bone_names) + 2))
 
-            # Lateral offset for left/right bones
             x_offset = 0.0
             if ".L" in bone_name:
                 x_offset = width * 0.15
             elif ".R" in bone_name:
                 x_offset = -width * 0.15
 
-            bone = _add_bone(
+            _add_bone(
                 armature,
                 bone_name,
                 head=[x_offset, 0.0, head_z],
@@ -151,22 +130,20 @@ def create_auto_rig(params: Dict[str, Any]) -> Dict[str, Any]:
                 parent=prev_bone,
                 use_connect=True,
             )
-            chain_bones.append(bone_name)
             bones_created.append(bone_name)
             bone_count += 1
             prev_bone = bone_name
 
-    # Parent mesh to armature
     bpy.ops.object.mode_set(mode="OBJECT")
     character.select_set(True)
     armature.select_set(True)
     bpy_context.view_layer.objects.active = armature
     bpy.ops.object.parent_set(type="ARMATURE_AUTO")
 
-    # Auto-weight paint
     bpy.ops.object.mode_set(mode="WEIGHT_PAINT")
     bpy.ops.object.mode_set(mode="OBJECT")
 
+    logger.info("Created auto rig", rig_name=rig_name, rig_type=rig_type)
     return {
         "status": "success",
         "rig_name": rig_name,
@@ -179,44 +156,31 @@ def create_auto_rig(params: Dict[str, Any]) -> Dict[str, Any]:
         "parented_mesh": character_name,
     }
 
-
 def generate_skeleton(params: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Generate a skeleton based on mesh analysis.
-
-    Parameters:
-    - mesh_name: Name of the target mesh
-    - skeleton_type: Type of skeleton generation
-    - bone_count: Optional target bone count
-    - symmetry: Generate symmetrical skeleton
-    """
+    """Generate a skeleton based on mesh analysis."""
     mesh_name = params.get("mesh_name")
     skeleton_type = params.get("skeleton_type", "auto")
     bone_count = params.get("bone_count")
     symmetry = params.get("symmetry", True)
 
     if not mesh_name:
-        raise ValueError("mesh_name is required")
+        raise BlenderMCPError("mesh_name is required")
 
     mesh = _resolve_object(mesh_name)
     if mesh is None:
-        raise ValueError(f"Mesh not found: {mesh_name}")
+        raise BlenderMCPError(f"Mesh not found: {mesh_name}")
 
-    # Create armature
     skeleton_name = f"{mesh_name}_skeleton"
     armature = _create_armature(skeleton_name)
 
-    # Analyze mesh for bone placement
     height = _get_bone_chain_length(mesh, "Z")
     width = _get_bone_chain_length(mesh, "X")
     depth = _get_bone_chain_length(mesh, "Y")
 
-    # Determine bone count
-    target_bones = bone_count or int(height * 3)  # Rough estimate
+    target_bones = bone_count or int(height * 3)
 
     bones_created = []
 
-    # Generate central spine
     spine_bones = max(3, target_bones // 4)
     for i in range(spine_bones):
         z_pos = height * (1.0 - (i + 0.5) / (spine_bones + 1))
@@ -233,10 +197,8 @@ def generate_skeleton(params: Dict[str, Any]) -> Dict[str, Any]:
         )
         bones_created.append(bone_name)
 
-    # Add symmetrical limb bones if symmetry enabled
     if symmetry:
         for side, x_mult in [("L", 1), ("R", -1)]:
-            # Arms
             arm_root_z = height * 0.7
             for i, bone_name in enumerate(["upper_arm", "lower_arm", "hand"]):
                 x_pos = x_mult * width * 0.2
@@ -251,7 +213,6 @@ def generate_skeleton(params: Dict[str, Any]) -> Dict[str, Any]:
                 )
                 bones_created.append(f"{bone_name}.{side}")
 
-            # Legs
             leg_root_z = height * 0.3
             for i, bone_name in enumerate(["thigh", "shin", "foot"]):
                 x_pos = x_mult * width * 0.1
@@ -265,6 +226,7 @@ def generate_skeleton(params: Dict[str, Any]) -> Dict[str, Any]:
 
     bpy.ops.object.mode_set(mode="OBJECT")
 
+    logger.info("Generated skeleton", skeleton_name=skeleton_name)
     return {
         "status": "success",
         "skeleton_name": skeleton_name,
@@ -276,47 +238,39 @@ def generate_skeleton(params: Dict[str, Any]) -> Dict[str, Any]:
         "mesh_dimensions": {"height": height, "width": width, "depth": depth},
     }
 
-
 def auto_weight_paint(params: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Automatically weight paint a mesh to an armature.
-
-    Parameters:
-    - mesh_name: Name of the mesh to weight paint
-    - armature_name: Name of the armature
-    - heat_method: Heat method ("bones", "envelopes", "harmonic")
-    - quality: Quality level ("low", "medium", "high")
-    """
+    """Automatically weight paint a mesh to an armature."""
     mesh_name = params.get("mesh_name")
     armature_name = params.get("armature_name")
     heat_method = params.get("heat_method", "bones")
     quality = params.get("quality", "high")
 
     if not mesh_name:
-        raise ValueError("mesh_name is required")
+        raise BlenderMCPError("mesh_name is required")
     if not armature_name:
-        raise ValueError("armature_name is required")
+        raise BlenderMCPError("armature_name is required")
 
     mesh = _resolve_object(mesh_name)
     armature = _resolve_object(armature_name)
 
     if mesh is None:
-        raise ValueError(f"Mesh not found: {mesh_name}")
+        raise BlenderMCPError(f"Mesh not found: {mesh_name}")
     if armature is None:
-        raise ValueError(f"Armature not found: {armature_name}")
+        raise BlenderMCPError(f"Armature not found: {armature_name}")
 
-    # Set up for weight painting
     bpy.ops.object.select_all(action="DESELECT")
     mesh.select_set(True)
     armature.select_set(True)
     bpy_context.view_layer.objects.active = armature
 
-    # Parent with automatic weights
     bpy.ops.object.parent_set(type="ARMATURE_AUTO")
 
-    # Get vertex group count
+    bpy.ops.object.mode_set(mode="WEIGHT_PAINT")
+    bpy.ops.object.mode_set(mode="OBJECT")
+
     vertex_groups = len(mesh.vertex_groups)
 
+    logger.info("Auto weight painted", mesh=mesh_name, armature=armature_name)
     return {
         "status": "success",
         "mesh_name": mesh_name,
@@ -327,42 +281,31 @@ def auto_weight_paint(params: Dict[str, Any]) -> Dict[str, Any]:
         "message": f"Auto weight painted {mesh_name} to {armature_name}",
     }
 
-
 def create_control_rig(params: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Create a control rig for animation.
-
-    Parameters:
-    - armature_name: Name of the base armature
-    - control_style: Style of controls ("studio", "game", "cartoon")
-    - ik_chains: List of IK chain bone names
-    - fk_layers: List of FK layer bone names
-    """
+    """Create a control rig for animation."""
     armature_name = params.get("armature_name")
     control_style = params.get("control_style", "studio")
     ik_chains = params.get("ik_chains", [])
     fk_layers = params.get("fk_layers", [])
 
     if not armature_name:
-        raise ValueError("armature_name is required")
+        raise BlenderMCPError("armature_name is required")
 
     armature = _resolve_object(armature_name)
     if armature is None:
-        raise ValueError(f"Armature not found: {armature_name}")
+        raise BlenderMCPError(f"Armature not found: {armature_name}")
 
-    # Create control rig armature
     control_name = f"{armature_name}_controls"
     control_armature = _create_armature(control_name)
 
     controls_created = []
     ik_setups = []
 
-    # Copy bone structure as controls
     bpy_context.view_layer.objects.active = armature
     bpy.ops.object.mode_set(mode="EDIT")
 
     for bone in armature.data.edit_bones:
-        control_bone = _add_bone(
+        _add_bone(
             control_armature,
             f"CTRL_{bone.name}",
             head=list(bone.head),
@@ -373,10 +316,10 @@ def create_control_rig(params: Dict[str, Any]) -> Dict[str, Any]:
 
     bpy.ops.object.mode_set(mode="OBJECT")
 
-    # Set up IK chains
     for chain in ik_chains:
         ik_setups.append({"chain": chain, "type": "ik", "enabled": True})
 
+    logger.info("Created control rig", name=control_name, base=armature_name)
     return {
         "status": "success",
         "control_rig_name": control_name,
@@ -388,11 +331,11 @@ def create_control_rig(params: Dict[str, Any]) -> Dict[str, Any]:
         "fk_layers": fk_layers,
     }
 
-
 def get_status() -> Dict[str, Any]:
     """Get rigging system status."""
     armatures = [obj for obj in bpy.data.objects if obj.type == "ARMATURE"]
 
+    logger.info("Getting rigging status")
     return {
         "status": "ready",
         "armature_count": len(armatures),

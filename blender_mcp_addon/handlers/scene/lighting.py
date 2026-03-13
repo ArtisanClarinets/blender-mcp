@@ -1,5 +1,4 @@
-"""
-Lighting handlers for Blender MCP addon.
+"""Lighting handlers for Blender MCP addon.
 
 Implements focused lighting presets, environment setup, and light management.
 """
@@ -9,10 +8,14 @@ import math
 from typing import Any, Dict, List, Optional
 
 import bpy
+import structlog
 
+from ...exceptions import BlenderMCPError
+
+logger = structlog.get_logger(__name__)
 
 _AREA_LIGHT_SHAPES = {"RECTANGLE", "SQUARE", "CIRCLE", "DISC"}
-_STUDIO_PRESET_SPECS = {
+_STUDIO_PRESET_SPECS: Dict[str, List[Dict[str, Any]]] = {
     "butterfly": [
         {
             "name": "Butterfly Key",
@@ -194,8 +197,8 @@ _STUDIO_PRESET_SPECS = {
     "three_point": [],
 }
 
-
 def _hdri_placeholder_color(hdri_name: Optional[str], blur: float) -> List[float]:
+    """Generate a placeholder color for an HDRI."""
     normalized_name = str(hdri_name or "default")
     name_seed = sum(
         (index + 1) * ord(char) for index, char in enumerate(normalized_name)
@@ -208,28 +211,28 @@ def _hdri_placeholder_color(hdri_name: Optional[str], blur: float) -> List[float
     ]
     return softened_color + [1.0]
 
-
 def _normalize_color(value: List[float], field_name: str) -> List[float]:
+    """Normalize a color to a list of 3 floats."""
     if len(value) != 3:
         raise ValueError(f"{field_name} must contain exactly 3 values")
     return [float(channel) for channel in value]
 
-
 def _resolve_optional_color(
     value: Optional[List[float]], default_color: List[float], field_name: str
 ) -> List[float]:
+    """Resolve an optional color to a list of 3 floats."""
     if value is None:
         return list(default_color)
     return _normalize_color(value, field_name)
 
-
 def _normalize_vector(value: List[float], field_name: str) -> List[float]:
+    """Normalize a vector to a list of 3 floats."""
     if len(value) != 3:
         raise ValueError(f"{field_name} must contain exactly 3 values")
     return [float(component) for component in value]
 
-
 def _get_or_create_world() -> bpy.types.World:
+    """Get or create a world for the scene."""
     world = bpy.context.scene.world
     if world is None:
         world = bpy.data.worlds.new("World")
@@ -237,41 +240,48 @@ def _get_or_create_world() -> bpy.types.World:
     world.use_nodes = True
     return world
 
-
-def _get_active_scene_objects():
+def _get_active_scene_objects() -> Any:
+    """Get the objects in the active scene."""
     scene = getattr(bpy.context, "scene", None)
+    if scene is None:
+        raise BlenderMCPError("No active scene")
     scene_objects = getattr(scene, "objects", None)
     if scene_objects is not None:
         return scene_objects
 
     collection = getattr(scene, "collection", None)
+    if collection is None:
+        raise BlenderMCPError("No active collection in scene")
     collection_objects = getattr(collection, "objects", None)
     if collection_objects is not None:
         return collection_objects
 
     return []
 
-
-def _get_collection_for_linking():
+def _get_collection_for_linking() -> Any:
+    """Get the collection to link new objects to."""
     collection = getattr(bpy.context, "collection", None)
     if collection is not None and getattr(collection, "objects", None) is not None:
         return collection
 
-    scene_collection = getattr(getattr(bpy.context, "scene", None), "collection", None)
+    scene = getattr(bpy.context, "scene", None)
+    if scene is None:
+        raise BlenderMCPError("No active scene")
+    scene_collection = getattr(scene, "collection", None)
     if (
         scene_collection is not None
         and getattr(scene_collection, "objects", None) is not None
     ):
         return scene_collection
 
-    raise ValueError("No active collection available to link new light")
+    raise BlenderMCPError("No active collection available to link new light")
 
-
-def _ensure_light_object(name: str, light_data_type: str = "AREA"):
+def _ensure_light_object(name: str, light_data_type: str = "AREA") -> Any:
+    """Ensure a light object with the given name exists."""
     existing_object = bpy.data.objects.get(name)
     if existing_object is not None:
         if getattr(existing_object, "type", None) != "LIGHT":
-            raise ValueError(f"Object exists and is not a light: {name}")
+            raise BlenderMCPError(f"Object exists and is not a light: {name}")
         existing_object.data.type = light_data_type
         return existing_object
 
@@ -280,13 +290,13 @@ def _ensure_light_object(name: str, light_data_type: str = "AREA"):
     _get_collection_for_linking().objects.link(light_object)
     return light_object
 
-
 def _configure_area_shape(
-    light_data, light_shape: str, size: float, size_y: Optional[float]
-):
+    light_data: Any, light_shape: str, size: float, size_y: Optional[float]
+) -> str:
+    """Configure the shape of an area light."""
     normalized_shape = str(light_shape).upper()
     if normalized_shape not in _AREA_LIGHT_SHAPES:
-        raise ValueError(f"Unsupported area light shape: {light_shape}")
+        raise BlenderMCPError(f"Unsupported area light shape: {light_shape}")
 
     light_data.shape = normalized_shape
     light_data.size = float(size)
@@ -295,8 +305,8 @@ def _configure_area_shape(
 
     return normalized_shape
 
-
-def _describe_light(light_object) -> Dict[str, Any]:
+def _describe_light(light_object: Any) -> Dict[str, Any]:
+    """Describe a light object."""
     light_data = getattr(light_object, "data", None)
     return {
         "name": light_object.name,
@@ -307,8 +317,8 @@ def _describe_light(light_object) -> Dict[str, Any]:
         "rotation": list(getattr(light_object, "rotation_euler", [0.0, 0.0, 0.0])),
     }
 
-
-def _find_node(nodes, node_idname: str):
+def _find_node(nodes: Any, node_idname: str) -> Any:
+    """Find a node in a node tree."""
     for node in nodes:
         if getattr(node, "bl_idname", None) == node_idname:
             return node
@@ -316,8 +326,8 @@ def _find_node(nodes, node_idname: str):
             return node
     return None
 
-
 def _build_three_point_specs(params: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Build the specifications for a three-point lighting setup."""
     return [
         {
             "name": "Three Point Key",
@@ -354,12 +364,11 @@ def _build_three_point_specs(params: Dict[str, Any]) -> List[Dict[str, Any]]:
         },
     ]
 
-
 def create_area_light(params: Dict[str, Any]) -> Dict[str, Any]:
     """Create or replace an area light."""
     name = params.get("name")
     if not name:
-        raise ValueError("Light name is required")
+        raise BlenderMCPError("Light name is required")
 
     light_shape = str(params.get("light_type", "RECTANGLE"))
     size = float(params.get("size", 1.0))
@@ -377,6 +386,7 @@ def create_area_light(params: Dict[str, Any]) -> Dict[str, Any]:
         light_object.data, light_shape, size, params.get("size_y")
     )
 
+    logger.info("Created area light", name=name, shape=normalized_shape)
     return {
         "status": "success",
         "name": light_object.name,
@@ -385,7 +395,6 @@ def create_area_light(params: Dict[str, Any]) -> Dict[str, Any]:
         "energy": light_object.data.energy,
     }
 
-
 def create_three_point_lighting(params: Dict[str, Any]) -> Dict[str, Any]:
     """Create or replace a three-point lighting setup."""
     lights = []
@@ -393,14 +402,14 @@ def create_three_point_lighting(params: Dict[str, Any]) -> Dict[str, Any]:
         create_area_light(light_spec)
         lights.append(light_spec["name"])
 
+    logger.info("Created three-point lighting setup")
     return {"status": "success", "preset": "three_point", "lights": lights}
-
 
 def create_studio_lighting(params: Dict[str, Any]) -> Dict[str, Any]:
     """Create a named studio preset."""
     preset = str(params.get("preset", "")).lower()
     if not preset:
-        raise ValueError("preset is required")
+        raise BlenderMCPError("preset is required")
     if preset == "three_point":
         return create_three_point_lighting(
             {
@@ -415,7 +424,7 @@ def create_studio_lighting(params: Dict[str, Any]) -> Dict[str, Any]:
 
     preset_specs = _STUDIO_PRESET_SPECS.get(preset)
     if preset_specs is None:
-        raise ValueError(f"Unsupported studio lighting preset: {preset}")
+        raise BlenderMCPError(f"Unsupported studio lighting preset: {preset}")
 
     base_intensity = float(params.get("intensity", 500.0))
     override_color = params.get("color")
@@ -433,8 +442,8 @@ def create_studio_lighting(params: Dict[str, Any]) -> Dict[str, Any]:
         create_area_light(light_params)
         lights.append(spec["name"])
 
+    logger.info("Created studio lighting setup", preset=preset)
     return {"status": "success", "preset": preset, "lights": lights}
-
 
 def create_hdri_environment(params: Dict[str, Any]) -> Dict[str, Any]:
     """Create an HDRI-style world background network."""
@@ -480,6 +489,7 @@ def create_hdri_environment(params: Dict[str, Any]) -> Dict[str, Any]:
     links.new(mix.outputs["Color"], background.inputs["Color"])
     links.new(background.outputs["Background"], output.inputs["Surface"])
 
+    logger.info("Created HDRI environment", hdri_name=hdri_name)
     return {
         "status": "success",
         "hdri_name": hdri_name,
@@ -487,7 +497,6 @@ def create_hdri_environment(params: Dict[str, Any]) -> Dict[str, Any]:
         "rotation": rotation,
         "blur": blur,
     }
-
 
 def create_volumetric_lighting(params: Dict[str, Any]) -> Dict[str, Any]:
     """Create or replace a volumetric world node setup."""
@@ -514,6 +523,7 @@ def create_volumetric_lighting(params: Dict[str, Any]) -> Dict[str, Any]:
     volume.inputs["Anisotropy"].default_value = anisotropy
     links.new(volume.outputs["Volume"], output.inputs["Volume"])
 
+    logger.info("Created volumetric lighting", density=density)
     return {
         "status": "success",
         "density": density,
@@ -521,15 +531,14 @@ def create_volumetric_lighting(params: Dict[str, Any]) -> Dict[str, Any]:
         "color": color,
     }
 
-
 def adjust_light_exposure(params: Dict[str, Any]) -> Dict[str, Any]:
     """Adjust scene exposure settings."""
     exposure = float(params.get("exposure", 0.0))
     gamma = float(params.get("gamma", 1.0))
     bpy.context.scene.view_settings.exposure = exposure
     bpy.context.scene.view_settings.gamma = gamma
+    logger.info("Adjusted light exposure", exposure=exposure, gamma=gamma)
     return {"status": "success", "exposure": exposure, "gamma": gamma}
-
 
 def clear_lights() -> Dict[str, Any]:
     """Remove all light objects from the scene."""
@@ -540,8 +549,8 @@ def clear_lights() -> Dict[str, Any]:
         bpy.data.objects.remove(obj, do_unlink=True)
         removed_count += 1
 
+    logger.info("Cleared lights", removed_count=removed_count)
     return {"status": "success", "removed_count": removed_count}
-
 
 def list_lights() -> Dict[str, Any]:
     """List light objects in the scene."""
@@ -551,7 +560,6 @@ def list_lights() -> Dict[str, Any]:
         if obj.type == "LIGHT"
     ]
     return {"lights": lights, "count": len(lights)}
-
 
 def create_hdri_lighting_setup(params: Dict[str, Any]) -> Dict[str, Any]:
     """Compatibility wrapper for a more descriptive HDRI lighting command."""
@@ -564,13 +572,11 @@ def create_hdri_lighting_setup(params: Dict[str, Any]) -> Dict[str, Any]:
         }
     )
 
-
-
 def create_volumetric_light_effect(params: Dict[str, Any]) -> Dict[str, Any]:
     """Create a lightweight volumetric lighting helper object."""
     light_name = params.get("light_name")
     if not light_name:
-        raise ValueError("light_name is required")
+        raise BlenderMCPError("light_name is required")
     density = float(params.get("density", 0.1))
     scatter_amount = float(params.get("scatter_amount", 1.0))
     anisotropy = float(params.get("anisotropy", 0.0))
@@ -578,7 +584,7 @@ def create_volumetric_light_effect(params: Dict[str, Any]) -> Dict[str, Any]:
 
     light_object = bpy.data.objects.get(light_name)
     if light_object is None or light_object.type != "LIGHT":
-        raise ValueError(f"Light not found: {light_name}")
+        raise BlenderMCPError(f"Light not found: {light_name}")
 
     helper_name = f"{light_name}_volume"
     existing = bpy.data.objects.get(helper_name)
@@ -605,6 +611,7 @@ def create_volumetric_light_effect(params: Dict[str, Any]) -> Dict[str, Any]:
     helper.data.materials.append(mat)
     helper.display_type = "WIRE"
 
+    logger.info("Created volumetric light effect", helper_object=helper.name)
     return {
         "status": "success",
         "helper_object": helper.name,
@@ -612,8 +619,6 @@ def create_volumetric_light_effect(params: Dict[str, Any]) -> Dict[str, Any]:
         "volume_type": volume_type,
         "density": density,
     }
-
-
 
 def create_studio_light_rig(params: Dict[str, Any]) -> Dict[str, Any]:
     """Create a named studio light rig using the base lighting primitives."""
@@ -639,14 +644,13 @@ def create_studio_light_rig(params: Dict[str, Any]) -> Dict[str, Any]:
             "rotation": [1.57, 0.0, 3.14],
         }
     )
+    logger.info("Created studio light rig", rig_type=rig_type)
     return {
         "status": "success",
         "rig_type": rig_type,
         "base_rig": base,
         "background_light": background,
     }
-
-
 
 def setup_light_linking(params: Dict[str, Any]) -> Dict[str, Any]:
     """Record a light-linking intent and apply collection tags when possible."""
@@ -657,15 +661,16 @@ def setup_light_linking(params: Dict[str, Any]) -> Dict[str, Any]:
     missing_lights = [name for name in light_objects if bpy.data.objects.get(name) is None]
     missing_targets = [name for name in target_objects if bpy.data.objects.get(name) is None]
     if missing_lights:
-        raise ValueError(f"Missing lights: {', '.join(missing_lights)}")
+        raise BlenderMCPError(f"Missing lights: {', '.join(missing_lights)}")
     if missing_targets:
-        raise ValueError(f"Missing target objects: {', '.join(missing_targets)}")
+        raise BlenderMCPError(f"Missing target objects: {', '.join(missing_targets)}")
 
     for light_name in light_objects:
         light = bpy.data.objects[light_name]
         light["blender_mcp_light_link_targets"] = json.dumps(target_objects)
         light["blender_mcp_light_link_type"] = link_type
 
+    logger.info("Set up light linking", lights=light_objects, targets=target_objects)
     return {
         "status": "success",
         "light_objects": light_objects,
