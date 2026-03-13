@@ -1,6 +1,6 @@
 {
   "name": "blender_mcp",
-  "description": "Interact with Blender 3D software through MCP protocol. Use this to create, modify, and query 3D scenes, objects, materials, and assets.",
+  "description": "Interact with Blender and studio pipeline tooling through MCP.",
   "parameters": {
     "type": "object",
     "properties": {
@@ -8,47 +8,122 @@
         "type": "string",
         "description": "Name of the Blender MCP tool to call",
         "enum": [
-          "observe_scene",
-          "get_scene_hash",
-          "get_scene_info",
-          "get_object_info",
-          "get_viewport_screenshot",
-          "get_selection",
-          "create_primitive",
-          "create_empty",
-          "create_camera",
-          "create_light",
-          "set_transform",
-          "select_objects",
-          "delete_objects",
-          "duplicate_object",
+          "adjust_light_exposure",
+          "ai_animation_assist",
+          "ai_generate_material",
+          "ai_lighting_design",
+          "ai_quality_check",
+          "ai_scene_composition",
+          "apply_camera_preset",
+          "assign_material",
           "assign_material_pbr",
-          "set_world_hdri",
+          "auto_weight_paint",
+          "clear_lights",
+          "clear_scene",
+          "compose_architectural_shot",
+          "compose_automotive_shot",
+          "compose_character_scene",
+          "compose_food_shot",
+          "compose_isometric_scene",
+          "compose_jewelry_shot",
+          "compose_product_shot",
+          "compose_studio_setup",
+          "create_animation_curve",
+          "create_animation_layer",
+          "create_area_light",
+          "create_auto_rig",
+          "create_bsdf_material",
+          "create_camera",
+          "create_composition_camera",
+          "create_control_rig",
+          "create_emission_material",
+          "create_empty",
+          "create_facial_animation",
+          "create_glass_material",
+          "create_hair_material",
+          "create_hdri_environment",
+          "create_hdri_lighting_setup",
+          "create_isometric_camera",
+          "create_job",
+          "create_layered_material",
+          "create_light",
+          "create_material_variations",
+          "create_metal_material",
+          "create_primitive",
+          "create_procedural_texture",
+          "create_render_job",
+          "create_shot",
+          "create_shot_version",
+          "create_sky_system",
+          "create_studio_light_rig",
+          "create_studio_lighting",
+          "create_subsurface_material",
+          "create_three_point_lighting",
+          "create_volume_material",
+          "create_volumetric_fog",
+          "create_volumetric_light_effect",
+          "create_volumetric_lighting",
+          "create_weather_system",
+          "delete_material",
+          "delete_objects",
+          "download_polyhaven_asset",
+          "download_sketchfab_model",
+          "duplicate_object",
           "execute_blender_code",
           "export_glb",
-          "render_preview",
           "export_scene_bundle",
-          "create_job",
-          "get_job",
-          "import_job_result",
-          "get_polyhaven_status",
-          "get_polyhaven_categories",
-          "search_polyhaven_assets",
-          "download_polyhaven_asset",
-          "set_texture",
-          "get_sketchfab_status",
-          "search_sketchfab_models",
-          "get_sketchfab_model_preview",
-          "download_sketchfab_model",
-          "get_hyper3d_status",
-          "generate_hyper3d_model_via_text",
-          "generate_hyper3d_model_via_images",
-          "poll_rodin_job_status",
-          "import_generated_asset",
-          "get_hunyuan3d_status",
+          "frame_camera_to_selection",
           "generate_hunyuan3d_model",
+          "generate_hyper3d_model_via_images",
+          "generate_hyper3d_model_via_text",
+          "generate_procedural_material",
+          "generate_skeleton",
+          "generate_tripo3d_model",
+          "get_hunyuan3d_status",
+          "get_hyper3d_status",
+          "get_job",
+          "get_object_info",
+          "get_polyhaven_categories",
+          "get_polyhaven_status",
+          "get_scene_hash",
+          "get_scene_info",
+          "get_selection",
+          "get_sketchfab_model_preview",
+          "get_sketchfab_status",
+          "get_tripo3d_status",
+          "get_viewport_screenshot",
+          "import_generated_asset",
+          "import_generated_asset_hunyuan",
+          "import_job_result",
+          "import_motion_capture",
+          "import_tripo3d_model",
+          "list_cameras",
+          "list_lights",
+          "list_materials",
+          "monitor_render_job",
+          "observe_scene",
+          "optimize_render_settings",
           "poll_hunyuan_job_status",
-          "import_generated_asset_hunyuan"
+          "poll_rodin_job_status",
+          "poll_tripo3d_status",
+          "render_animation_passes",
+          "render_preview",
+          "retarget_animation",
+          "review_shot",
+          "search_polyhaven_assets",
+          "search_sketchfab_models",
+          "select_objects",
+          "set_active_camera",
+          "set_camera_depth_of_field",
+          "set_keyframe",
+          "set_texture",
+          "set_transform",
+          "set_world_hdri",
+          "setup_light_linking",
+          "setup_render_passes",
+          "setup_render_settings",
+          "setup_shot_camera",
+          "setup_stereoscopic_render"
         ]
       },
       "params": {
@@ -56,328 +131,2628 @@
         "description": "Parameters to pass to the tool"
       }
     },
-    "required": ["tool_name", "params"]
+    "required": [
+      "tool_name",
+      "params"
+    ]
   },
   "tools": {
-    "observe_scene": {
-      "description": "Observe the current scene state with configurable detail level",
+    "adjust_light_exposure": {
+      "description": "Adjust scene exposure and gamma.",
       "params": {
-        "detail": "Level of detail (low, med, high)",
-        "include_screenshot": "Whether to capture a screenshot",
-        "max_screenshot_size": "Maximum screenshot dimension"
-      }
+        "exposure": {
+          "required": false,
+          "type": "float",
+          "default": "0.0"
+        },
+        "gamma": {
+          "required": false,
+          "type": "float",
+          "default": "1.0"
+        }
+      },
+      "command_name": "adjust_light_exposure",
+      "module": "blender_mcp.tools.lighting",
+      "source_file": "src/blender_mcp/tools/lighting.py"
     },
-    "get_scene_hash": {
-      "description": "Get a stable hash of the current scene state",
-      "params": {}
-    },
-    "get_scene_info": {
-      "description": "Get detailed information about the current Blender scene",
-      "params": {}
-    },
-    "get_object_info": {
-      "description": "Get detailed information about a specific object",
+    "ai_animation_assist": {
+      "description": "AI-assisted animation generation.",
       "params": {
-        "object_name": "Name or ID of the object"
-      }
+        "animation_type": {
+          "required": true,
+          "type": "str"
+        },
+        "character_name": {
+          "required": true,
+          "type": "str"
+        },
+        "action_description": {
+          "required": true,
+          "type": "str"
+        },
+        "style": {
+          "required": false,
+          "type": "Optional[str]",
+          "default": "None"
+        }
+      },
+      "command_name": "ai_animation_assist",
+      "module": "blender_mcp.tools.ai_creative",
+      "source_file": "src/blender_mcp/tools/ai_creative.py"
     },
-    "get_viewport_screenshot": {
-      "description": "Capture a screenshot of the current Blender 3D viewport",
+    "ai_generate_material": {
+      "description": "Generate material using AI from text description.",
       "params": {
-        "max_size": "Maximum size in pixels (default: 800)"
-      }
+        "description": {
+          "required": true,
+          "type": "str"
+        },
+        "name": {
+          "required": true,
+          "type": "str"
+        },
+        "style_reference": {
+          "required": false,
+          "type": "Optional[str]",
+          "default": "None"
+        },
+        "quality": {
+          "required": false,
+          "type": "str",
+          "default": "'high'"
+        }
+      },
+      "command_name": "ai_generate_material",
+      "module": "blender_mcp.tools.procedural_materials",
+      "source_file": "src/blender_mcp/tools/procedural_materials.py"
     },
-    "get_selection": {
-      "description": "Get information about currently selected objects",
-      "params": {}
-    },
-    "create_primitive": {
-      "description": "Create a primitive object (cube, sphere, cylinder, cone, torus, plane)",
+    "ai_lighting_design": {
+      "description": "Design lighting setup using AI.",
       "params": {
-        "type": "Primitive type",
-        "name": "Optional name",
-        "size": "Optional size",
-        "location": "Optional [x, y, z] location",
-        "rotation": "Optional [x, y, z] rotation in radians",
-        "scale": "Optional [x, y, z] scale"
-      }
+        "scene_description": {
+          "required": true,
+          "type": "str"
+        },
+        "time_of_day": {
+          "required": true,
+          "type": "str"
+        },
+        "mood": {
+          "required": true,
+          "type": "str"
+        },
+        "style": {
+          "required": false,
+          "type": "str",
+          "default": "'cinematic'"
+        }
+      },
+      "command_name": "ai_lighting_design",
+      "module": "blender_mcp.tools.ai_creative",
+      "source_file": "src/blender_mcp/tools/ai_creative.py"
     },
-    "create_empty": {
-      "description": "Create an empty object",
+    "ai_quality_check": {
+      "description": "Perform AI-powered quality checks.",
       "params": {
-        "name": "Optional name",
-        "location": "Optional [x, y, z] location"
-      }
+        "check_type": {
+          "required": true,
+          "type": "str"
+        },
+        "target_objects": {
+          "required": false,
+          "type": "Optional[List[str]]",
+          "default": "None"
+        },
+        "quality_level": {
+          "required": false,
+          "type": "str",
+          "default": "'production'"
+        }
+      },
+      "command_name": "ai_quality_check",
+      "module": "blender_mcp.tools.ai_creative",
+      "source_file": "src/blender_mcp/tools/ai_creative.py"
     },
-    "create_camera": {
-      "description": "Create a camera",
+    "ai_scene_composition": {
+      "description": "Generate scene composition using AI.",
       "params": {
-        "name": "Optional name",
-        "lens": "Optional focal length in mm",
-        "location": "Optional [x, y, z] location",
-        "look_at": "Optional [x, y, z] point to look at"
-      }
+        "scene_type": {
+          "required": true,
+          "type": "str"
+        },
+        "mood": {
+          "required": true,
+          "type": "str"
+        },
+        "complexity": {
+          "required": false,
+          "type": "str",
+          "default": "'medium'"
+        },
+        "style_reference": {
+          "required": false,
+          "type": "Optional[str]",
+          "default": "None"
+        }
+      },
+      "command_name": "ai_scene_composition",
+      "module": "blender_mcp.tools.ai_creative",
+      "source_file": "src/blender_mcp/tools/ai_creative.py"
     },
-    "create_light": {
-      "description": "Create a light (point, sun, spot, area)",
+    "apply_camera_preset": {
+      "description": "Apply a named camera preset.",
       "params": {
-        "type": "Light type",
-        "energy": "Light energy/strength",
-        "color": "Optional [r, g, b] color (0-1 range)",
-        "location": "Optional [x, y, z] location",
-        "rotation": "Optional [x, y, z] rotation"
-      }
+        "camera_name": {
+          "required": true,
+          "type": "str"
+        },
+        "preset": {
+          "required": true,
+          "type": "str"
+        }
+      },
+      "command_name": "apply_camera_preset",
+      "module": "blender_mcp.tools.camera",
+      "source_file": "src/blender_mcp/tools/camera.py"
     },
-    "set_transform": {
-      "description": "Set object transform (location, rotation, scale)",
+    "assign_material": {
+      "description": "Assign an existing material to an object by name.",
       "params": {
-        "target_id": "Object name or ID",
-        "location": "Optional [x, y, z] location",
-        "rotation": "Optional [x, y, z] rotation",
-        "scale": "Optional [x, y, z] scale",
-        "apply": "Whether to apply the transform"
-      }
-    },
-    "select_objects": {
-      "description": "Select objects in the scene",
-      "params": {
-        "ids": "List of object names or IDs",
-        "mode": "Selection mode (set, add, remove)"
-      }
-    },
-    "delete_objects": {
-      "description": "Delete objects from the scene",
-      "params": {
-        "ids": "List of object names or IDs"
-      }
-    },
-    "duplicate_object": {
-      "description": "Duplicate an object",
-      "params": {
-        "id": "Object name or ID",
-        "linked": "Whether to create linked duplicates",
-        "count": "Number of duplicates"
-      }
+        "object_name": {
+          "required": true,
+          "type": "str"
+        },
+        "material_name": {
+          "required": true,
+          "type": "str"
+        }
+      },
+      "command_name": "assign_material",
+      "module": "blender_mcp.tools.materials",
+      "source_file": "src/blender_mcp/tools/materials.py"
     },
     "assign_material_pbr": {
-      "description": "Assign PBR material to an object",
+      "description": "Assign a PBR material to an object.",
       "params": {
-        "target_id": "Object name or ID",
-        "material_spec": "Material specification with base_color, metallic, roughness, normal_map"
-      }
+        "target_id": {
+          "required": true,
+          "type": "str"
+        },
+        "material_spec": {
+          "required": true,
+          "type": "Dict[str, Any]"
+        }
+      },
+      "command_name": "assign_material_pbr",
+      "module": "blender_mcp.tools.scene_ops",
+      "source_file": "src/blender_mcp/tools/scene_ops.py"
     },
-    "set_world_hdri": {
-      "description": "Set world HDRI environment",
+    "auto_weight_paint": {
+      "description": "Automatically weight paint a mesh to an armature.",
       "params": {
-        "asset_id": "PolyHaven HDRI asset ID",
-        "resolution": "Resolution (1k, 2k, 4k, 8k)"
-      }
+        "mesh_name": {
+          "required": true,
+          "type": "str"
+        },
+        "armature_name": {
+          "required": true,
+          "type": "str"
+        },
+        "heat_method": {
+          "required": false,
+          "type": "str",
+          "default": "'bones'"
+        },
+        "quality": {
+          "required": false,
+          "type": "str",
+          "default": "'high'"
+        }
+      },
+      "command_name": "auto_weight_paint",
+      "module": "blender_mcp.tools.rigging",
+      "source_file": "src/blender_mcp/tools/rigging.py"
     },
-    "execute_blender_code": {
-      "description": "Execute arbitrary Python code in Blender (use with caution)",
-      "params": {
-        "code": "Python code to execute"
-      }
+    "clear_lights": {
+      "description": "Remove all scene lights.",
+      "params": {},
+      "command_name": "clear_lights",
+      "module": "blender_mcp.tools.lighting",
+      "source_file": "src/blender_mcp/tools/lighting.py"
     },
-    "export_glb": {
-      "description": "Export scene or selection to GLB format",
+    "clear_scene": {
+      "description": "Remove scene objects while optionally preserving cameras and lights.",
       "params": {
-        "target": "What to export (scene, selection, collection)",
-        "name": "Name for exported file",
-        "output_dir": "Output directory",
-        "draco": "Use Draco compression",
-        "texture_embed": "Embed textures",
-        "y_up": "Use Y-up coordinate system"
-      }
+        "keep_camera": {
+          "required": false,
+          "type": "bool",
+          "default": "False"
+        },
+        "keep_lights": {
+          "required": false,
+          "type": "bool",
+          "default": "False"
+        }
+      },
+      "command_name": "clear_scene",
+      "module": "blender_mcp.tools.composition",
+      "source_file": "src/blender_mcp/tools/composition.py"
     },
-    "render_preview": {
-      "description": "Render a preview image",
+    "compose_architectural_shot": {
+      "description": "Compose an architectural-shot preset.",
       "params": {
-        "output_path": "Path to save image",
-        "camera": "Optional camera name",
-        "resolution": "[width, height] in pixels"
-      }
+        "interior": {
+          "required": false,
+          "type": "bool",
+          "default": "False"
+        },
+        "natural_light": {
+          "required": false,
+          "type": "bool",
+          "default": "True"
+        }
+      },
+      "command_name": "compose_architectural_shot",
+      "module": "blender_mcp.tools.composition",
+      "source_file": "src/blender_mcp/tools/composition.py"
     },
-    "export_scene_bundle": {
-      "description": "Export complete scene bundle for Next.js 16",
+    "compose_automotive_shot": {
+      "description": "Compose an automotive-shot preset.",
       "params": {
-        "slug": "Unique identifier",
-        "nextjs_project_root": "Path to Next.js project",
-        "mode": "Export mode (scene, assets)",
-        "generate_r3f": "Generate R3F components"
-      }
+        "car_name": {
+          "required": false,
+          "type": "str",
+          "default": "'Car'"
+        },
+        "angle": {
+          "required": false,
+          "type": "str",
+          "default": "'three_quarter'"
+        },
+        "environment": {
+          "required": false,
+          "type": "str",
+          "default": "'studio'"
+        }
+      },
+      "command_name": "compose_automotive_shot",
+      "module": "blender_mcp.tools.composition",
+      "source_file": "src/blender_mcp/tools/composition.py"
+    },
+    "compose_character_scene": {
+      "description": "Compose a character-scene preset.",
+      "params": {
+        "character_name": {
+          "required": false,
+          "type": "str",
+          "default": "'Character'"
+        },
+        "ground_plane": {
+          "required": false,
+          "type": "bool",
+          "default": "True"
+        },
+        "environment": {
+          "required": false,
+          "type": "str",
+          "default": "'studio'"
+        }
+      },
+      "command_name": "compose_character_scene",
+      "module": "blender_mcp.tools.composition",
+      "source_file": "src/blender_mcp/tools/composition.py"
+    },
+    "compose_food_shot": {
+      "description": "Compose a food-shot preset.",
+      "params": {
+        "style": {
+          "required": false,
+          "type": "str",
+          "default": "'flat_lay'"
+        }
+      },
+      "command_name": "compose_food_shot",
+      "module": "blender_mcp.tools.composition",
+      "source_file": "src/blender_mcp/tools/composition.py"
+    },
+    "compose_isometric_scene": {
+      "description": "Compose an isometric scene preset.",
+      "params": {
+        "grid_size": {
+          "required": false,
+          "type": "float",
+          "default": "10.0"
+        },
+        "floor": {
+          "required": false,
+          "type": "bool",
+          "default": "True"
+        },
+        "shadow_catcher": {
+          "required": false,
+          "type": "bool",
+          "default": "True"
+        }
+      },
+      "command_name": "compose_isometric_scene",
+      "module": "blender_mcp.tools.composition",
+      "source_file": "src/blender_mcp/tools/composition.py"
+    },
+    "compose_jewelry_shot": {
+      "description": "Compose a jewelry-shot preset.",
+      "params": {
+        "style": {
+          "required": false,
+          "type": "str",
+          "default": "'macro'"
+        },
+        "reflections": {
+          "required": false,
+          "type": "bool",
+          "default": "True"
+        }
+      },
+      "command_name": "compose_jewelry_shot",
+      "module": "blender_mcp.tools.composition",
+      "source_file": "src/blender_mcp/tools/composition.py"
+    },
+    "compose_product_shot": {
+      "description": "Compose a product-shot scene preset.",
+      "params": {
+        "product_name": {
+          "required": false,
+          "type": "str",
+          "default": "'Product'"
+        },
+        "style": {
+          "required": false,
+          "type": "str",
+          "default": "'clean'"
+        },
+        "background": {
+          "required": false,
+          "type": "str",
+          "default": "'white'"
+        }
+      },
+      "command_name": "compose_product_shot",
+      "module": "blender_mcp.tools.composition",
+      "source_file": "src/blender_mcp/tools/composition.py"
+    },
+    "compose_studio_setup": {
+      "description": "Compose a studio setup preset.",
+      "params": {
+        "subject_type": {
+          "required": false,
+          "type": "str",
+          "default": "'generic'"
+        },
+        "mood": {
+          "required": false,
+          "type": "str",
+          "default": "'neutral'"
+        }
+      },
+      "command_name": "compose_studio_setup",
+      "module": "blender_mcp.tools.composition",
+      "source_file": "src/blender_mcp/tools/composition.py"
+    },
+    "create_animation_curve": {
+      "description": "Create an animation curve with multiple keyframes.",
+      "params": {
+        "object_name": {
+          "required": true,
+          "type": "str"
+        },
+        "property_path": {
+          "required": true,
+          "type": "str"
+        },
+        "keyframes": {
+          "required": true,
+          "type": "List[Dict[str, Any]]"
+        },
+        "curve_type": {
+          "required": false,
+          "type": "str",
+          "default": "'bezier'"
+        }
+      },
+      "command_name": "create_animation_curve",
+      "module": "blender_mcp.tools.animation",
+      "source_file": "src/blender_mcp/tools/animation.py"
+    },
+    "create_animation_layer": {
+      "description": "Create an animation layer for non-destructive animation.",
+      "params": {
+        "layer_name": {
+          "required": true,
+          "type": "str"
+        },
+        "objects": {
+          "required": true,
+          "type": "List[str]"
+        },
+        "properties": {
+          "required": true,
+          "type": "List[str]"
+        },
+        "influence": {
+          "required": false,
+          "type": "float",
+          "default": "1.0"
+        }
+      },
+      "command_name": "create_animation_layer",
+      "module": "blender_mcp.tools.animation",
+      "source_file": "src/blender_mcp/tools/animation.py"
+    },
+    "create_area_light": {
+      "description": "Create or replace an area light.",
+      "params": {
+        "name": {
+          "required": true,
+          "type": "str"
+        },
+        "light_type": {
+          "required": false,
+          "type": "str",
+          "default": "'RECTANGLE'"
+        },
+        "size": {
+          "required": false,
+          "type": "float",
+          "default": "1.0"
+        },
+        "location": {
+          "required": false,
+          "type": "Optional[List[float]]",
+          "default": "None"
+        },
+        "rotation": {
+          "required": false,
+          "type": "Optional[List[float]]",
+          "default": "None"
+        },
+        "energy": {
+          "required": false,
+          "type": "float",
+          "default": "100.0"
+        },
+        "color": {
+          "required": false,
+          "type": "Optional[List[float]]",
+          "default": "None"
+        }
+      },
+      "command_name": "create_area_light",
+      "module": "blender_mcp.tools.lighting",
+      "source_file": "src/blender_mcp/tools/lighting.py"
+    },
+    "create_auto_rig": {
+      "description": "Create an automated rig for a character.",
+      "params": {
+        "character_name": {
+          "required": true,
+          "type": "str"
+        },
+        "rig_type": {
+          "required": true,
+          "type": "str"
+        },
+        "skeleton_template": {
+          "required": false,
+          "type": "Optional[str]",
+          "default": "None"
+        },
+        "ik_fk_switch": {
+          "required": false,
+          "type": "bool",
+          "default": "True"
+        },
+        "facial_rig": {
+          "required": false,
+          "type": "bool",
+          "default": "False"
+        }
+      },
+      "command_name": "create_auto_rig",
+      "module": "blender_mcp.tools.rigging",
+      "source_file": "src/blender_mcp/tools/rigging.py"
+    },
+    "create_bsdf_material": {
+      "description": "Create or replace a Principled BSDF material.",
+      "params": {
+        "name": {
+          "required": true,
+          "type": "str"
+        },
+        "base_color": {
+          "required": false,
+          "type": "Optional[List[float]]",
+          "default": "None"
+        },
+        "metallic": {
+          "required": false,
+          "type": "Optional[float]",
+          "default": "None"
+        },
+        "roughness": {
+          "required": false,
+          "type": "Optional[float]",
+          "default": "None"
+        },
+        "specular": {
+          "required": false,
+          "type": "Optional[float]",
+          "default": "None"
+        },
+        "subsurface": {
+          "required": false,
+          "type": "Optional[float]",
+          "default": "None"
+        },
+        "subsurface_color": {
+          "required": false,
+          "type": "Optional[List[float]]",
+          "default": "None"
+        },
+        "transmission": {
+          "required": false,
+          "type": "Optional[float]",
+          "default": "None"
+        },
+        "ior": {
+          "required": false,
+          "type": "Optional[float]",
+          "default": "None"
+        },
+        "emission_color": {
+          "required": false,
+          "type": "Optional[List[float]]",
+          "default": "None"
+        },
+        "emission_strength": {
+          "required": false,
+          "type": "Optional[float]",
+          "default": "None"
+        }
+      },
+      "command_name": "create_bsdf_material",
+      "module": "blender_mcp.tools.materials",
+      "source_file": "src/blender_mcp/tools/materials.py"
+    },
+    "create_camera": {
+      "description": "Create a camera in the scene.",
+      "params": {
+        "name": {
+          "required": false,
+          "type": "Optional[str]",
+          "default": "None"
+        },
+        "lens": {
+          "required": false,
+          "type": "Optional[float]",
+          "default": "None"
+        },
+        "location": {
+          "required": false,
+          "type": "Optional[List[float]]",
+          "default": "None"
+        },
+        "look_at": {
+          "required": false,
+          "type": "Optional[List[float]]",
+          "default": "None"
+        }
+      },
+      "command_name": "create_camera",
+      "module": "blender_mcp.tools.scene_ops",
+      "source_file": "src/blender_mcp/tools/scene_ops.py"
+    },
+    "create_composition_camera": {
+      "description": "Create or replace a composition camera.",
+      "params": {
+        "name": {
+          "required": false,
+          "type": "str",
+          "default": "'Camera'"
+        },
+        "composition": {
+          "required": false,
+          "type": "str",
+          "default": "'center'"
+        },
+        "focal_length": {
+          "required": false,
+          "type": "float",
+          "default": "50.0"
+        },
+        "location": {
+          "required": false,
+          "type": "Optional[List[float]]",
+          "default": "None"
+        },
+        "target": {
+          "required": false,
+          "type": "Optional[List[float]]",
+          "default": "None"
+        }
+      },
+      "command_name": "create_composition_camera",
+      "module": "blender_mcp.tools.camera",
+      "source_file": "src/blender_mcp/tools/camera.py"
+    },
+    "create_control_rig": {
+      "description": "Create a control rig for animation.",
+      "params": {
+        "armature_name": {
+          "required": true,
+          "type": "str"
+        },
+        "control_style": {
+          "required": false,
+          "type": "str",
+          "default": "'studio'"
+        },
+        "ik_chains": {
+          "required": false,
+          "type": "Optional[List[str]]",
+          "default": "None"
+        },
+        "fk_layers": {
+          "required": false,
+          "type": "Optional[List[str]]",
+          "default": "None"
+        }
+      },
+      "command_name": "create_control_rig",
+      "module": "blender_mcp.tools.rigging",
+      "source_file": "src/blender_mcp/tools/rigging.py"
+    },
+    "create_emission_material": {
+      "description": "Create or replace an emission material.",
+      "params": {
+        "name": {
+          "required": true,
+          "type": "str"
+        },
+        "color": {
+          "required": true,
+          "type": "List[float]"
+        },
+        "strength": {
+          "required": false,
+          "type": "float",
+          "default": "10.0"
+        },
+        "shadow_mode": {
+          "required": false,
+          "type": "str",
+          "default": "'none'"
+        }
+      },
+      "command_name": "create_emission_material",
+      "module": "blender_mcp.tools.materials",
+      "source_file": "src/blender_mcp/tools/materials.py"
+    },
+    "create_empty": {
+      "description": "Create an empty object in the scene.",
+      "params": {
+        "name": {
+          "required": false,
+          "type": "Optional[str]",
+          "default": "None"
+        },
+        "location": {
+          "required": false,
+          "type": "Optional[List[float]]",
+          "default": "None"
+        }
+      },
+      "command_name": "create_empty",
+      "module": "blender_mcp.tools.scene_ops",
+      "source_file": "src/blender_mcp/tools/scene_ops.py"
+    },
+    "create_facial_animation": {
+      "description": "Create facial animation from audio or emotion curves.",
+      "params": {
+        "character_name": {
+          "required": true,
+          "type": "str"
+        },
+        "audio_file": {
+          "required": false,
+          "type": "Optional[str]",
+          "default": "None"
+        },
+        "emotion_curve": {
+          "required": false,
+          "type": "Optional[Dict[str, Any]]",
+          "default": "None"
+        },
+        "viseme_library": {
+          "required": false,
+          "type": "Optional[str]",
+          "default": "None"
+        }
+      },
+      "command_name": "create_facial_animation",
+      "module": "blender_mcp.tools.animation",
+      "source_file": "src/blender_mcp/tools/animation.py"
+    },
+    "create_glass_material": {
+      "description": "Create or replace a glass material.",
+      "params": {
+        "name": {
+          "required": true,
+          "type": "str"
+        },
+        "color": {
+          "required": false,
+          "type": "Optional[List[float]]",
+          "default": "None"
+        },
+        "roughness": {
+          "required": false,
+          "type": "float",
+          "default": "0.0"
+        },
+        "ior": {
+          "required": false,
+          "type": "float",
+          "default": "1.45"
+        },
+        "transmission": {
+          "required": false,
+          "type": "float",
+          "default": "1.0"
+        }
+      },
+      "command_name": "create_glass_material",
+      "module": "blender_mcp.tools.materials",
+      "source_file": "src/blender_mcp/tools/materials.py"
+    },
+    "create_hair_material": {
+      "description": "Create a realistic hair material.",
+      "params": {
+        "name": {
+          "required": true,
+          "type": "str"
+        },
+        "base_color": {
+          "required": true,
+          "type": "List[float]"
+        },
+        "roughness": {
+          "required": false,
+          "type": "float",
+          "default": "0.3"
+        },
+        "radial_roughness": {
+          "required": false,
+          "type": "float",
+          "default": "0.1"
+        },
+        "coat": {
+          "required": false,
+          "type": "float",
+          "default": "0.0"
+        },
+        "ior": {
+          "required": false,
+          "type": "float",
+          "default": "1.55"
+        },
+        "melanin": {
+          "required": false,
+          "type": "float",
+          "default": "0.5"
+        },
+        "melanin_redness": {
+          "required": false,
+          "type": "float",
+          "default": "0.0"
+        }
+      },
+      "command_name": "create_hair_material",
+      "module": "blender_mcp.tools.materials",
+      "source_file": "src/blender_mcp/tools/materials.py"
+    },
+    "create_hdri_environment": {
+      "description": "Create an HDRI-style world environment.",
+      "params": {
+        "hdri_name": {
+          "required": false,
+          "type": "Optional[str]",
+          "default": "None"
+        },
+        "strength": {
+          "required": false,
+          "type": "float",
+          "default": "1.0"
+        },
+        "rotation": {
+          "required": false,
+          "type": "float",
+          "default": "0.0"
+        },
+        "blur": {
+          "required": false,
+          "type": "float",
+          "default": "0.0"
+        }
+      },
+      "command_name": "create_hdri_environment",
+      "module": "blender_mcp.tools.lighting",
+      "source_file": "src/blender_mcp/tools/lighting.py"
+    },
+    "create_hdri_lighting_setup": {
+      "description": "Create an HDRI-based lighting setup.",
+      "params": {
+        "hdri_path": {
+          "required": false,
+          "type": "Optional[str]",
+          "default": "None"
+        },
+        "hdri_name": {
+          "required": false,
+          "type": "Optional[str]",
+          "default": "None"
+        },
+        "rotation": {
+          "required": false,
+          "type": "float",
+          "default": "0.0"
+        },
+        "strength": {
+          "required": false,
+          "type": "float",
+          "default": "1.0"
+        },
+        "saturation": {
+          "required": false,
+          "type": "float",
+          "default": "1.0"
+        }
+      },
+      "command_name": "create_hdri_lighting_setup",
+      "module": "blender_mcp.tools.lighting",
+      "source_file": "src/blender_mcp/tools/lighting.py"
+    },
+    "create_isometric_camera": {
+      "description": "Create or replace an isometric camera.",
+      "params": {
+        "name": {
+          "required": false,
+          "type": "str",
+          "default": "'Isometric'"
+        },
+        "ortho_scale": {
+          "required": false,
+          "type": "float",
+          "default": "10.0"
+        },
+        "angle": {
+          "required": false,
+          "type": "float",
+          "default": "35.264"
+        }
+      },
+      "command_name": "create_isometric_camera",
+      "module": "blender_mcp.tools.camera",
+      "source_file": "src/blender_mcp/tools/camera.py"
     },
     "create_job": {
-      "description": "Create async AI generation job",
+      "description": "Create a new async job for AI generation.",
       "params": {
-        "provider": "Provider (hyper3d, hunyuan3d)",
-        "payload": "Job-specific payload"
-      }
+        "provider": {
+          "required": true,
+          "type": "str"
+        },
+        "payload": {
+          "required": true,
+          "type": "Dict[str, Any]"
+        }
+      },
+      "command_name": "create_job",
+      "module": "blender_mcp.tools.jobs",
+      "source_file": "src/blender_mcp/tools/jobs.py"
     },
-    "get_job": {
-      "description": "Get job status",
+    "create_layered_material": {
+      "description": "Create a multi-layered material system.",
       "params": {
-        "job_id": "Job ID"
-      }
+        "name": {
+          "required": true,
+          "type": "str"
+        },
+        "base_material": {
+          "required": true,
+          "type": "str"
+        },
+        "layers": {
+          "required": true,
+          "type": "List[Dict[str, Any]]"
+        },
+        "blend_modes": {
+          "required": false,
+          "type": "Optional[List[str]]",
+          "default": "None"
+        }
+      },
+      "command_name": "create_layered_material",
+      "module": "blender_mcp.tools.materials",
+      "source_file": "src/blender_mcp/tools/materials.py"
     },
-    "import_job_result": {
-      "description": "Import completed job result",
+    "create_light": {
+      "description": "Create a light in the scene.",
       "params": {
-        "job_id": "Job ID",
-        "name": "Object name",
-        "target_size": "Optional target size"
-      }
+        "type": {
+          "required": true,
+          "type": "str"
+        },
+        "energy": {
+          "required": true,
+          "type": "float"
+        },
+        "color": {
+          "required": false,
+          "type": "Optional[List[float]]",
+          "default": "None"
+        },
+        "location": {
+          "required": false,
+          "type": "Optional[List[float]]",
+          "default": "None"
+        },
+        "rotation": {
+          "required": false,
+          "type": "Optional[List[float]]",
+          "default": "None"
+        }
+      },
+      "command_name": "create_light",
+      "module": "blender_mcp.tools.scene_ops",
+      "source_file": "src/blender_mcp/tools/scene_ops.py"
     },
-    "get_polyhaven_status": {
-      "description": "Check PolyHaven integration status",
-      "params": {}
-    },
-    "get_polyhaven_categories": {
-      "description": "Get PolyHaven categories",
+    "create_material_variations": {
+      "description": "Create variations of an existing material.",
       "params": {
-        "asset_type": "Type (hdris, textures, models, all)"
-      }
+        "base_material": {
+          "required": true,
+          "type": "str"
+        },
+        "variation_count": {
+          "required": false,
+          "type": "int",
+          "default": "5"
+        },
+        "variation_type": {
+          "required": false,
+          "type": "str",
+          "default": "'color'"
+        },
+        "parameters": {
+          "required": false,
+          "type": "Optional[Dict[str, Any]]",
+          "default": "None"
+        }
+      },
+      "command_name": "create_material_variations",
+      "module": "blender_mcp.tools.procedural_materials",
+      "source_file": "src/blender_mcp/tools/procedural_materials.py"
     },
-    "search_polyhaven_assets": {
-      "description": "Search PolyHaven assets",
+    "create_metal_material": {
+      "description": "Create or replace a metal material.",
       "params": {
-        "asset_type": "Type (hdris, textures, models, all)",
-        "categories": "Optional comma-separated categories"
-      }
+        "name": {
+          "required": true,
+          "type": "str"
+        },
+        "base_color": {
+          "required": true,
+          "type": "List[float]"
+        },
+        "roughness": {
+          "required": false,
+          "type": "float",
+          "default": "0.3"
+        },
+        "anisotropy": {
+          "required": false,
+          "type": "float",
+          "default": "0.0"
+        }
+      },
+      "command_name": "create_metal_material",
+      "module": "blender_mcp.tools.materials",
+      "source_file": "src/blender_mcp/tools/materials.py"
+    },
+    "create_primitive": {
+      "description": "Create a primitive object in the scene.",
+      "params": {
+        "type": {
+          "required": true,
+          "type": "str"
+        },
+        "name": {
+          "required": false,
+          "type": "Optional[str]",
+          "default": "None"
+        },
+        "size": {
+          "required": false,
+          "type": "Optional[float]",
+          "default": "None"
+        },
+        "location": {
+          "required": false,
+          "type": "Optional[List[float]]",
+          "default": "None"
+        },
+        "rotation": {
+          "required": false,
+          "type": "Optional[List[float]]",
+          "default": "None"
+        },
+        "scale": {
+          "required": false,
+          "type": "Optional[List[float]]",
+          "default": "None"
+        }
+      },
+      "command_name": "create_primitive",
+      "module": "blender_mcp.tools.scene_ops",
+      "source_file": "src/blender_mcp/tools/scene_ops.py"
+    },
+    "create_procedural_texture": {
+      "description": "Create a material driven by a procedural texture node.",
+      "params": {
+        "texture_type": {
+          "required": true,
+          "type": "str"
+        },
+        "name": {
+          "required": true,
+          "type": "str"
+        },
+        "scale": {
+          "required": false,
+          "type": "float",
+          "default": "5.0"
+        },
+        "detail": {
+          "required": false,
+          "type": "float",
+          "default": "2.0"
+        },
+        "roughness": {
+          "required": false,
+          "type": "float",
+          "default": "0.5"
+        },
+        "distortion": {
+          "required": false,
+          "type": "float",
+          "default": "0.0"
+        }
+      },
+      "command_name": "create_procedural_texture",
+      "module": "blender_mcp.tools.materials",
+      "source_file": "src/blender_mcp/tools/materials.py"
+    },
+    "create_render_job": {
+      "description": "Create a render farm job.",
+      "params": {
+        "job_name": {
+          "required": true,
+          "type": "str"
+        },
+        "frame_range": {
+          "required": true,
+          "type": "List[int]"
+        },
+        "output_path": {
+          "required": true,
+          "type": "str"
+        },
+        "priority": {
+          "required": false,
+          "type": "int",
+          "default": "1"
+        },
+        "nodes": {
+          "required": false,
+          "type": "int",
+          "default": "1"
+        },
+        "render_settings": {
+          "required": false,
+          "type": "Optional[Dict[str, Any]]",
+          "default": "None"
+        }
+      },
+      "command_name": "create_render_job",
+      "module": "blender_mcp.tools.render_farm",
+      "source_file": "src/blender_mcp/tools/render_farm.py"
+    },
+    "create_shot": {
+      "description": "Create a new shot in the production pipeline.",
+      "params": {
+        "shot_name": {
+          "required": true,
+          "type": "str"
+        },
+        "sequence": {
+          "required": true,
+          "type": "str"
+        },
+        "shot_number": {
+          "required": true,
+          "type": "int"
+        },
+        "description": {
+          "required": true,
+          "type": "str"
+        },
+        "duration": {
+          "required": true,
+          "type": "float"
+        },
+        "assets": {
+          "required": false,
+          "type": "Optional[List[str]]",
+          "default": "None"
+        }
+      },
+      "command_name": "create_shot",
+      "module": "blender_mcp.tools.production",
+      "source_file": "src/blender_mcp/tools/production.py"
+    },
+    "create_shot_version": {
+      "description": "Create a new version of a shot.",
+      "params": {
+        "shot_name": {
+          "required": true,
+          "type": "str"
+        },
+        "version_type": {
+          "required": false,
+          "type": "str",
+          "default": "'animation'"
+        },
+        "notes": {
+          "required": false,
+          "type": "Optional[str]",
+          "default": "None"
+        },
+        "artist": {
+          "required": false,
+          "type": "Optional[str]",
+          "default": "None"
+        }
+      },
+      "command_name": "create_shot_version",
+      "module": "blender_mcp.tools.production",
+      "source_file": "src/blender_mcp/tools/production.py"
+    },
+    "create_sky_system": {
+      "description": "Create a physically accurate sky system.",
+      "params": {
+        "sky_type": {
+          "required": false,
+          "type": "str",
+          "default": "'nishita'"
+        },
+        "time_of_day": {
+          "required": false,
+          "type": "float",
+          "default": "12.0"
+        },
+        "turbidity": {
+          "required": false,
+          "type": "float",
+          "default": "2.0"
+        },
+        "rayleigh": {
+          "required": false,
+          "type": "float",
+          "default": "2.0"
+        },
+        "mie": {
+          "required": false,
+          "type": "float",
+          "default": "0.005"
+        }
+      },
+      "command_name": "create_sky_system",
+      "module": "blender_mcp.tools.atmospherics",
+      "source_file": "src/blender_mcp/tools/atmospherics.py"
+    },
+    "create_studio_light_rig": {
+      "description": "Create a professional studio lighting rig.",
+      "params": {
+        "rig_type": {
+          "required": false,
+          "type": "str",
+          "default": "'portrait'"
+        },
+        "key_light_intensity": {
+          "required": false,
+          "type": "float",
+          "default": "1000.0"
+        },
+        "fill_light_intensity": {
+          "required": false,
+          "type": "float",
+          "default": "500.0"
+        },
+        "rim_light_intensity": {
+          "required": false,
+          "type": "float",
+          "default": "800.0"
+        },
+        "background_light_intensity": {
+          "required": false,
+          "type": "float",
+          "default": "200.0"
+        }
+      },
+      "command_name": "create_studio_light_rig",
+      "module": "blender_mcp.tools.lighting",
+      "source_file": "src/blender_mcp/tools/lighting.py"
+    },
+    "create_studio_lighting": {
+      "description": "Create a named studio lighting preset.",
+      "params": {
+        "preset": {
+          "required": true,
+          "type": "str"
+        },
+        "intensity": {
+          "required": false,
+          "type": "float",
+          "default": "500.0"
+        },
+        "color": {
+          "required": false,
+          "type": "Optional[List[float]]",
+          "default": "None"
+        }
+      },
+      "command_name": "create_studio_lighting",
+      "module": "blender_mcp.tools.lighting",
+      "source_file": "src/blender_mcp/tools/lighting.py"
+    },
+    "create_subsurface_material": {
+      "description": "Create an advanced subsurface scattering material.",
+      "params": {
+        "name": {
+          "required": true,
+          "type": "str"
+        },
+        "base_color": {
+          "required": true,
+          "type": "List[float]"
+        },
+        "subsurface_color": {
+          "required": true,
+          "type": "List[float]"
+        },
+        "subsurface_radius": {
+          "required": true,
+          "type": "List[float]"
+        },
+        "subsurface": {
+          "required": false,
+          "type": "float",
+          "default": "0.5"
+        },
+        "roughness": {
+          "required": false,
+          "type": "float",
+          "default": "0.5"
+        },
+        "subsurface_method": {
+          "required": false,
+          "type": "str",
+          "default": "'random_walk'"
+        }
+      },
+      "command_name": "create_subsurface_material",
+      "module": "blender_mcp.tools.materials",
+      "source_file": "src/blender_mcp/tools/materials.py"
+    },
+    "create_three_point_lighting": {
+      "description": "Create a three-point lighting rig.",
+      "params": {
+        "key_intensity": {
+          "required": false,
+          "type": "float",
+          "default": "1000.0"
+        },
+        "fill_intensity": {
+          "required": false,
+          "type": "float",
+          "default": "500.0"
+        },
+        "rim_intensity": {
+          "required": false,
+          "type": "float",
+          "default": "800.0"
+        },
+        "key_color": {
+          "required": false,
+          "type": "Optional[List[float]]",
+          "default": "None"
+        },
+        "fill_color": {
+          "required": false,
+          "type": "Optional[List[float]]",
+          "default": "None"
+        },
+        "rim_color": {
+          "required": false,
+          "type": "Optional[List[float]]",
+          "default": "None"
+        }
+      },
+      "command_name": "create_three_point_lighting",
+      "module": "blender_mcp.tools.lighting",
+      "source_file": "src/blender_mcp/tools/lighting.py"
+    },
+    "create_volume_material": {
+      "description": "Create a volume material for clouds, smoke, or fire.",
+      "params": {
+        "name": {
+          "required": true,
+          "type": "str"
+        },
+        "density": {
+          "required": false,
+          "type": "float",
+          "default": "0.1"
+        },
+        "anisotropy": {
+          "required": false,
+          "type": "float",
+          "default": "0.0"
+        },
+        "absorption_color": {
+          "required": false,
+          "type": "Optional[List[float]]",
+          "default": "None"
+        },
+        "emission_color": {
+          "required": false,
+          "type": "Optional[List[float]]",
+          "default": "None"
+        },
+        "emission_strength": {
+          "required": false,
+          "type": "float",
+          "default": "0.0"
+        }
+      },
+      "command_name": "create_volume_material",
+      "module": "blender_mcp.tools.materials",
+      "source_file": "src/blender_mcp/tools/materials.py"
+    },
+    "create_volumetric_fog": {
+      "description": "Create volumetric fog effect.",
+      "params": {
+        "density": {
+          "required": false,
+          "type": "float",
+          "default": "0.1"
+        },
+        "height": {
+          "required": false,
+          "type": "float",
+          "default": "10.0"
+        },
+        "falloff": {
+          "required": false,
+          "type": "float",
+          "default": "1.0"
+        },
+        "color": {
+          "required": false,
+          "type": "Optional[List[float]]",
+          "default": "None"
+        },
+        "noise_scale": {
+          "required": false,
+          "type": "float",
+          "default": "1.0"
+        }
+      },
+      "command_name": "create_volumetric_fog",
+      "module": "blender_mcp.tools.atmospherics",
+      "source_file": "src/blender_mcp/tools/atmospherics.py"
+    },
+    "create_volumetric_light_effect": {
+      "description": "Create volumetric lighting effects on a specific light.",
+      "params": {
+        "light_name": {
+          "required": true,
+          "type": "str"
+        },
+        "volume_type": {
+          "required": false,
+          "type": "str",
+          "default": "'god_rays'"
+        },
+        "density": {
+          "required": false,
+          "type": "float",
+          "default": "0.1"
+        },
+        "scatter_amount": {
+          "required": false,
+          "type": "float",
+          "default": "1.0"
+        },
+        "anisotropy": {
+          "required": false,
+          "type": "float",
+          "default": "0.0"
+        }
+      },
+      "command_name": "create_volumetric_light_effect",
+      "module": "blender_mcp.tools.lighting",
+      "source_file": "src/blender_mcp/tools/lighting.py"
+    },
+    "create_volumetric_lighting": {
+      "description": "Create volumetric world lighting.",
+      "params": {
+        "density": {
+          "required": false,
+          "type": "float",
+          "default": "0.1"
+        },
+        "anisotropy": {
+          "required": false,
+          "type": "float",
+          "default": "0.0"
+        },
+        "color": {
+          "required": false,
+          "type": "Optional[List[float]]",
+          "default": "None"
+        }
+      },
+      "command_name": "create_volumetric_lighting",
+      "module": "blender_mcp.tools.lighting",
+      "source_file": "src/blender_mcp/tools/lighting.py"
+    },
+    "create_weather_system": {
+      "description": "Create a weather system with particles and effects.",
+      "params": {
+        "weather_type": {
+          "required": true,
+          "type": "str"
+        },
+        "intensity": {
+          "required": false,
+          "type": "float",
+          "default": "0.5"
+        },
+        "coverage": {
+          "required": false,
+          "type": "float",
+          "default": "0.5"
+        },
+        "wind_speed": {
+          "required": false,
+          "type": "float",
+          "default": "0.0"
+        },
+        "wind_direction": {
+          "required": false,
+          "type": "Optional[List[float]]",
+          "default": "None"
+        }
+      },
+      "command_name": "create_weather_system",
+      "module": "blender_mcp.tools.atmospherics",
+      "source_file": "src/blender_mcp/tools/atmospherics.py"
+    },
+    "delete_material": {
+      "description": "Delete a material by name.",
+      "params": {
+        "name": {
+          "required": true,
+          "type": "str"
+        }
+      },
+      "command_name": "delete_material",
+      "module": "blender_mcp.tools.materials",
+      "source_file": "src/blender_mcp/tools/materials.py"
+    },
+    "delete_objects": {
+      "description": "Delete objects from the scene.",
+      "params": {
+        "ids": {
+          "required": true,
+          "type": "List[str]"
+        }
+      },
+      "command_name": "delete_objects",
+      "module": "blender_mcp.tools.scene_ops",
+      "source_file": "src/blender_mcp/tools/scene_ops.py"
     },
     "download_polyhaven_asset": {
-      "description": "Download PolyHaven asset",
+      "description": "Download and import a PolyHaven asset.",
       "params": {
-        "asset_id": "Asset ID",
-        "asset_type": "Type (hdris, textures, models)",
-        "resolution": "Resolution (1k, 2k, 4k)",
-        "file_format": "Optional format"
-      }
-    },
-    "set_texture": {
-      "description": "Apply texture to object",
-      "params": {
-        "object_name": "Object name",
-        "texture_id": "Texture ID"
-      }
-    },
-    "get_sketchfab_status": {
-      "description": "Check Sketchfab integration status",
-      "params": {}
-    },
-    "search_sketchfab_models": {
-      "description": "Search Sketchfab models",
-      "params": {
-        "query": "Search query",
-        "categories": "Optional categories",
-        "count": "Max results",
-        "downloadable": "Only downloadable"
-      }
-    },
-    "get_sketchfab_model_preview": {
-      "description": "Get Sketchfab model preview",
-      "params": {
-        "uid": "Model UID"
-      }
+        "asset_id": {
+          "required": true,
+          "type": "str"
+        },
+        "asset_type": {
+          "required": true,
+          "type": "str"
+        },
+        "resolution": {
+          "required": false,
+          "type": "str",
+          "default": "'2k'"
+        },
+        "file_format": {
+          "required": false,
+          "type": "Optional[str]",
+          "default": "None"
+        }
+      },
+      "command_name": "download_polyhaven_asset",
+      "module": "blender_mcp.tools.assets",
+      "source_file": "src/blender_mcp/tools/assets.py"
     },
     "download_sketchfab_model": {
-      "description": "Download Sketchfab model",
+      "description": "Download and import a Sketchfab model.",
       "params": {
-        "uid": "Model UID",
-        "target_size": "Optional target size"
-      }
+        "uid": {
+          "required": true,
+          "type": "str"
+        },
+        "target_size": {
+          "required": false,
+          "type": "Optional[float]",
+          "default": "None"
+        }
+      },
+      "command_name": "download_sketchfab_model",
+      "module": "blender_mcp.tools.assets",
+      "source_file": "src/blender_mcp/tools/assets.py"
     },
-    "get_hyper3d_status": {
-      "description": "Check Hyper3D status",
-      "params": {}
-    },
-    "generate_hyper3d_model_via_text": {
-      "description": "Generate Hyper3D model from text",
+    "duplicate_object": {
+      "description": "Duplicate an object in the scene.",
       "params": {
-        "text_prompt": "Description",
-        "bbox_condition": "Optional [L,W,H] ratio"
-      }
+        "id": {
+          "required": true,
+          "type": "str"
+        },
+        "linked": {
+          "required": false,
+          "type": "bool",
+          "default": "False"
+        },
+        "count": {
+          "required": false,
+          "type": "int",
+          "default": "1"
+        }
+      },
+      "command_name": "duplicate_object",
+      "module": "blender_mcp.tools.scene_ops",
+      "source_file": "src/blender_mcp/tools/scene_ops.py"
     },
-    "generate_hyper3d_model_via_images": {
-      "description": "Generate Hyper3D model from images",
+    "execute_blender_code": {
+      "description": "Execute arbitrary Python code in Blender.",
       "params": {
-        "input_image_paths": "Image paths",
-        "input_image_urls": "Image URLs",
-        "bbox_condition": "Optional ratio"
-      }
+        "code": {
+          "required": true,
+          "type": "str"
+        }
+      },
+      "command_name": "execute_blender_code",
+      "module": "blender_mcp.tools.scene_ops",
+      "source_file": "src/blender_mcp/tools/scene_ops.py"
     },
-    "poll_rodin_job_status": {
-      "description": "Check Hyper3D job status",
+    "export_glb": {
+      "description": "Export scene or selection to GLB format.",
       "params": {
-        "subscription_key": "For MAIN_SITE",
-        "request_id": "For FAL_AI"
-      }
+        "target": {
+          "required": false,
+          "type": "str",
+          "default": "'scene'"
+        },
+        "name": {
+          "required": false,
+          "type": "str",
+          "default": "'export'"
+        },
+        "output_dir": {
+          "required": false,
+          "type": "str",
+          "default": "'exports'"
+        },
+        "draco": {
+          "required": false,
+          "type": "bool",
+          "default": "True"
+        },
+        "texture_embed": {
+          "required": false,
+          "type": "bool",
+          "default": "True"
+        },
+        "y_up": {
+          "required": false,
+          "type": "bool",
+          "default": "True"
+        }
+      },
+      "command_name": "export_glb",
+      "module": "blender_mcp.tools.export",
+      "source_file": "src/blender_mcp/tools/export.py"
     },
-    "import_generated_asset": {
-      "description": "Import Hyper3D asset",
+    "export_scene_bundle": {
+      "description": "Export a complete scene bundle for Next.js 16 integration.",
       "params": {
-        "name": "Object name",
-        "task_uuid": "For MAIN_SITE",
-        "request_id": "For FAL_AI"
-      }
+        "slug": {
+          "required": true,
+          "type": "str"
+        },
+        "nextjs_project_root": {
+          "required": true,
+          "type": "str"
+        },
+        "mode": {
+          "required": false,
+          "type": "str",
+          "default": "'scene'"
+        },
+        "generate_r3f": {
+          "required": false,
+          "type": "bool",
+          "default": "False"
+        }
+      },
+      "command_name": "export_scene_bundle",
+      "module": "blender_mcp.tools.export",
+      "source_file": "src/blender_mcp/tools/export.py"
     },
-    "get_hunyuan3d_status": {
-      "description": "Check Hunyuan3D status",
-      "params": {}
+    "frame_camera_to_selection": {
+      "description": "Frame the named camera to the current selection.",
+      "params": {
+        "camera_name": {
+          "required": true,
+          "type": "str"
+        },
+        "margin": {
+          "required": false,
+          "type": "float",
+          "default": "1.1"
+        }
+      },
+      "command_name": "frame_camera_to_selection",
+      "module": "blender_mcp.tools.camera",
+      "source_file": "src/blender_mcp/tools/camera.py"
     },
     "generate_hunyuan3d_model": {
-      "description": "Generate Hunyuan3D model",
+      "description": "Generate 3D model using Hunyuan3D.",
       "params": {
-        "text_prompt": "Description",
-        "input_image_url": "Optional image URL"
-      }
+        "text_prompt": {
+          "required": false,
+          "type": "Optional[str]",
+          "default": "None"
+        },
+        "input_image_url": {
+          "required": false,
+          "type": "Optional[str]",
+          "default": "None"
+        }
+      },
+      "command_name": "generate_hunyuan3d_model",
+      "module": "blender_mcp.tools.jobs",
+      "source_file": "src/blender_mcp/tools/jobs.py"
     },
-    "poll_hunyuan_job_status": {
-      "description": "Check Hunyuan3D job status",
+    "generate_hyper3d_model_via_images": {
+      "description": "Generate 3D model using Hyper3D from images.",
       "params": {
-        "job_id": "Job ID"
-      }
+        "input_image_paths": {
+          "required": false,
+          "type": "Optional[List[str]]",
+          "default": "None"
+        },
+        "input_image_urls": {
+          "required": false,
+          "type": "Optional[List[str]]",
+          "default": "None"
+        },
+        "bbox_condition": {
+          "required": false,
+          "type": "Optional[List[float]]",
+          "default": "None"
+        }
+      },
+      "command_name": "generate_hyper3d_model_via_images",
+      "module": "blender_mcp.tools.jobs",
+      "source_file": "src/blender_mcp/tools/jobs.py"
+    },
+    "generate_hyper3d_model_via_text": {
+      "description": "Generate 3D model using Hyper3D from text prompt.",
+      "params": {
+        "text_prompt": {
+          "required": true,
+          "type": "str"
+        },
+        "bbox_condition": {
+          "required": false,
+          "type": "Optional[List[float]]",
+          "default": "None"
+        }
+      },
+      "command_name": "generate_hyper3d_model_via_text",
+      "module": "blender_mcp.tools.jobs",
+      "source_file": "src/blender_mcp/tools/jobs.py"
+    },
+    "generate_procedural_material": {
+      "description": "Generate a procedural material based on type and parameters.",
+      "params": {
+        "material_type": {
+          "required": true,
+          "type": "str"
+        },
+        "name": {
+          "required": true,
+          "type": "str"
+        },
+        "parameters": {
+          "required": false,
+          "type": "Optional[Dict[str, Any]]",
+          "default": "None"
+        },
+        "seed": {
+          "required": false,
+          "type": "Optional[int]",
+          "default": "None"
+        },
+        "resolution": {
+          "required": false,
+          "type": "str",
+          "default": "'2k'"
+        }
+      },
+      "command_name": "generate_procedural_material",
+      "module": "blender_mcp.tools.procedural_materials",
+      "source_file": "src/blender_mcp/tools/procedural_materials.py"
+    },
+    "generate_skeleton": {
+      "description": "Generate a skeleton based on mesh analysis.",
+      "params": {
+        "mesh_name": {
+          "required": true,
+          "type": "str"
+        },
+        "skeleton_type": {
+          "required": true,
+          "type": "str"
+        },
+        "bone_count": {
+          "required": false,
+          "type": "Optional[int]",
+          "default": "None"
+        },
+        "symmetry": {
+          "required": false,
+          "type": "bool",
+          "default": "True"
+        }
+      },
+      "command_name": "generate_skeleton",
+      "module": "blender_mcp.tools.rigging",
+      "source_file": "src/blender_mcp/tools/rigging.py"
+    },
+    "generate_tripo3d_model": {
+      "description": "Generate a Tripo3D model from text or image input.",
+      "params": {
+        "text_prompt": {
+          "required": false,
+          "type": "Optional[str]",
+          "default": "None"
+        },
+        "image_url": {
+          "required": false,
+          "type": "Optional[str]",
+          "default": "None"
+        }
+      },
+      "command_name": "generate_tripo3d_model",
+      "module": "blender_mcp.tools.tripo3d",
+      "source_file": "src/blender_mcp/tools/tripo3d.py"
+    },
+    "get_hunyuan3d_status": {
+      "description": "Check Hunyuan3D integration status.",
+      "params": {},
+      "command_name": "get_hunyuan3d_status",
+      "module": "blender_mcp.tools.jobs",
+      "source_file": "src/blender_mcp/tools/jobs.py"
+    },
+    "get_hyper3d_status": {
+      "description": "Check Hyper3D Rodin integration status.",
+      "params": {},
+      "command_name": "get_hyper3d_status",
+      "module": "blender_mcp.tools.jobs",
+      "source_file": "src/blender_mcp/tools/jobs.py"
+    },
+    "get_job": {
+      "description": "Get the status of a job.",
+      "params": {
+        "job_id": {
+          "required": true,
+          "type": "str"
+        }
+      },
+      "command_name": "get_job",
+      "module": "blender_mcp.tools.jobs",
+      "source_file": "src/blender_mcp/tools/jobs.py"
+    },
+    "get_object_info": {
+      "description": "Get detailed information about a specific object.",
+      "params": {
+        "object_name": {
+          "required": true,
+          "type": "str"
+        }
+      },
+      "command_name": "get_object_info",
+      "module": "blender_mcp.tools.observe",
+      "source_file": "src/blender_mcp/tools/observe.py"
+    },
+    "get_polyhaven_categories": {
+      "description": "Get categories for PolyHaven assets.",
+      "params": {
+        "asset_type": {
+          "required": false,
+          "type": "str",
+          "default": "'all'"
+        }
+      },
+      "command_name": "get_polyhaven_categories",
+      "module": "blender_mcp.tools.assets",
+      "source_file": "src/blender_mcp/tools/assets.py"
+    },
+    "get_polyhaven_status": {
+      "description": "Check PolyHaven integration status.",
+      "params": {},
+      "command_name": "get_polyhaven_status",
+      "module": "blender_mcp.tools.assets",
+      "source_file": "src/blender_mcp/tools/assets.py"
+    },
+    "get_scene_hash": {
+      "description": "Get a stable hash of the current scene state.",
+      "params": {},
+      "command_name": "get_scene_hash",
+      "module": "blender_mcp.tools.observe",
+      "source_file": "src/blender_mcp/tools/observe.py"
+    },
+    "get_scene_info": {
+      "description": "Get detailed information about the current Blender scene.",
+      "params": {},
+      "command_name": "get_scene_info",
+      "module": "blender_mcp.tools.observe",
+      "source_file": "src/blender_mcp/tools/observe.py"
+    },
+    "get_selection": {
+      "description": "Get information about currently selected objects.",
+      "params": {},
+      "command_name": "get_selection",
+      "module": "blender_mcp.tools.observe",
+      "source_file": "src/blender_mcp/tools/observe.py"
+    },
+    "get_sketchfab_model_preview": {
+      "description": "Get preview thumbnail of a Sketchfab model.",
+      "params": {
+        "uid": {
+          "required": true,
+          "type": "str"
+        }
+      },
+      "command_name": "get_sketchfab_model_preview",
+      "module": "blender_mcp.tools.assets",
+      "source_file": "src/blender_mcp/tools/assets.py"
+    },
+    "get_sketchfab_status": {
+      "description": "Check Sketchfab integration status.",
+      "params": {},
+      "command_name": "get_sketchfab_status",
+      "module": "blender_mcp.tools.assets",
+      "source_file": "src/blender_mcp/tools/assets.py"
+    },
+    "get_tripo3d_status": {
+      "description": "Check Tripo3D integration status.",
+      "params": {},
+      "command_name": "get_tripo3d_status",
+      "module": "blender_mcp.tools.tripo3d",
+      "source_file": "src/blender_mcp/tools/tripo3d.py"
+    },
+    "get_viewport_screenshot": {
+      "description": "Capture a screenshot of the current Blender 3D viewport.",
+      "params": {
+        "max_size": {
+          "required": false,
+          "type": "int",
+          "default": "800"
+        }
+      },
+      "command_name": "get_viewport_screenshot",
+      "module": "blender_mcp.tools.observe",
+      "source_file": "src/blender_mcp/tools/observe.py"
+    },
+    "import_generated_asset": {
+      "description": "Import Hyper3D generated asset.",
+      "params": {
+        "name": {
+          "required": true,
+          "type": "str"
+        },
+        "task_uuid": {
+          "required": false,
+          "type": "Optional[str]",
+          "default": "None"
+        },
+        "request_id": {
+          "required": false,
+          "type": "Optional[str]",
+          "default": "None"
+        }
+      },
+      "command_name": "import_generated_asset",
+      "module": "blender_mcp.tools.jobs",
+      "source_file": "src/blender_mcp/tools/jobs.py"
     },
     "import_generated_asset_hunyuan": {
-      "description": "Import Hunyuan3D asset",
+      "description": "Import Hunyuan3D generated asset.",
       "params": {
-        "name": "Object name",
-        "zip_file_url": "ZIP URL"
-      }
-    }
-  },
-  "tool_return_schema": {
-    "description": "All tools return JSON objects with consistent structure",
-    "success_response": {
-      "ok": true,
-      "data": "Tool-specific data",
-      "request_id": "Correlation ID",
-      "meta": "Optional metadata"
-    },
-    "error_response": {
-      "ok": false,
-      "error": {
-        "code": "Error code",
-        "message": "Error message",
-        "details": "Optional details"
+        "name": {
+          "required": true,
+          "type": "str"
+        },
+        "zip_file_url": {
+          "required": true,
+          "type": "str"
+        }
       },
-      "request_id": "Correlation ID"
+      "command_name": "import_generated_asset_hunyuan",
+      "module": "blender_mcp.tools.jobs",
+      "source_file": "src/blender_mcp/tools/jobs.py"
+    },
+    "import_job_result": {
+      "description": "Import the result of a completed job.",
+      "params": {
+        "job_id": {
+          "required": true,
+          "type": "str"
+        },
+        "name": {
+          "required": true,
+          "type": "str"
+        },
+        "target_size": {
+          "required": false,
+          "type": "Optional[float]",
+          "default": "None"
+        }
+      },
+      "command_name": "import_job_result",
+      "module": "blender_mcp.tools.jobs",
+      "source_file": "src/blender_mcp/tools/jobs.py"
+    },
+    "import_motion_capture": {
+      "description": "Import motion capture data to an armature.",
+      "params": {
+        "file_path": {
+          "required": true,
+          "type": "str"
+        },
+        "target_armature": {
+          "required": true,
+          "type": "str"
+        },
+        "scale_factor": {
+          "required": false,
+          "type": "float",
+          "default": "1.0"
+        },
+        "frame_offset": {
+          "required": false,
+          "type": "int",
+          "default": "0"
+        }
+      },
+      "command_name": "import_motion_capture",
+      "module": "blender_mcp.tools.animation",
+      "source_file": "src/blender_mcp/tools/animation.py"
+    },
+    "import_tripo3d_model": {
+      "description": "Import a generated Tripo3D model.",
+      "params": {
+        "model_url": {
+          "required": true,
+          "type": "str"
+        },
+        "name": {
+          "required": false,
+          "type": "str",
+          "default": "'Tripo3D_Model'"
+        }
+      },
+      "command_name": "import_tripo3d_model",
+      "module": "blender_mcp.tools.tripo3d",
+      "source_file": "src/blender_mcp/tools/tripo3d.py"
+    },
+    "list_cameras": {
+      "description": "List cameras in the active scene.",
+      "params": {},
+      "command_name": "list_cameras",
+      "module": "blender_mcp.tools.camera",
+      "source_file": "src/blender_mcp/tools/camera.py"
+    },
+    "list_lights": {
+      "description": "List scene lights.",
+      "params": {},
+      "command_name": "list_lights",
+      "module": "blender_mcp.tools.lighting",
+      "source_file": "src/blender_mcp/tools/lighting.py"
+    },
+    "list_materials": {
+      "description": "List scene materials.",
+      "params": {},
+      "command_name": "list_materials",
+      "module": "blender_mcp.tools.materials",
+      "source_file": "src/blender_mcp/tools/materials.py"
+    },
+    "monitor_render_job": {
+      "description": "Monitor render job progress.",
+      "params": {
+        "job_id": {
+          "required": true,
+          "type": "str"
+        }
+      },
+      "command_name": "monitor_render_job",
+      "module": "blender_mcp.tools.render_farm",
+      "source_file": "src/blender_mcp/tools/render_farm.py"
+    },
+    "observe_scene": {
+      "description": "Observe the current scene state with configurable detail level.",
+      "params": {
+        "detail": {
+          "required": false,
+          "type": "str",
+          "default": "'med'"
+        },
+        "include_screenshot": {
+          "required": false,
+          "type": "bool",
+          "default": "False"
+        },
+        "max_screenshot_size": {
+          "required": false,
+          "type": "int",
+          "default": "800"
+        }
+      },
+      "command_name": "observe_scene",
+      "module": "blender_mcp.tools.observe",
+      "source_file": "src/blender_mcp/tools/observe.py"
+    },
+    "optimize_render_settings": {
+      "description": "Optimize render settings for quality/time balance.",
+      "params": {
+        "quality_target": {
+          "required": false,
+          "type": "str",
+          "default": "'production'"
+        },
+        "time_budget": {
+          "required": false,
+          "type": "Optional[float]",
+          "default": "None"
+        },
+        "memory_limit": {
+          "required": false,
+          "type": "Optional[float]",
+          "default": "None"
+        }
+      },
+      "command_name": "optimize_render_settings",
+      "module": "blender_mcp.tools.render_farm",
+      "source_file": "src/blender_mcp/tools/render_farm.py"
+    },
+    "poll_hunyuan_job_status": {
+      "description": "Check Hunyuan3D job status.",
+      "params": {
+        "job_id": {
+          "required": true,
+          "type": "str"
+        }
+      },
+      "command_name": "poll_hunyuan_job_status",
+      "module": "blender_mcp.tools.jobs",
+      "source_file": "src/blender_mcp/tools/jobs.py"
+    },
+    "poll_rodin_job_status": {
+      "description": "Check Hyper3D generation task status.",
+      "params": {
+        "subscription_key": {
+          "required": false,
+          "type": "Optional[str]",
+          "default": "None"
+        },
+        "request_id": {
+          "required": false,
+          "type": "Optional[str]",
+          "default": "None"
+        }
+      },
+      "command_name": "poll_rodin_job_status",
+      "module": "blender_mcp.tools.jobs",
+      "source_file": "src/blender_mcp/tools/jobs.py"
+    },
+    "poll_tripo3d_status": {
+      "description": "Poll a Tripo3D generation task.",
+      "params": {
+        "task_id": {
+          "required": true,
+          "type": "str"
+        }
+      },
+      "command_name": "poll_tripo3d_status",
+      "module": "blender_mcp.tools.tripo3d",
+      "source_file": "src/blender_mcp/tools/tripo3d.py"
+    },
+    "render_animation_passes": {
+      "description": "Render animation with multiple passes.",
+      "params": {
+        "frame_start": {
+          "required": true,
+          "type": "int"
+        },
+        "frame_end": {
+          "required": true,
+          "type": "int"
+        },
+        "output_path": {
+          "required": true,
+          "type": "str"
+        },
+        "passes": {
+          "required": false,
+          "type": "Optional[List[str]]",
+          "default": "None"
+        },
+        "resolution": {
+          "required": false,
+          "type": "Optional[List[int]]",
+          "default": "None"
+        }
+      },
+      "command_name": "render_animation_passes",
+      "module": "blender_mcp.tools.export",
+      "source_file": "src/blender_mcp/tools/export.py"
+    },
+    "render_preview": {
+      "description": "Render a preview image of the scene.",
+      "params": {
+        "output_path": {
+          "required": true,
+          "type": "str"
+        },
+        "camera": {
+          "required": false,
+          "type": "Optional[str]",
+          "default": "None"
+        },
+        "resolution": {
+          "required": false,
+          "type": "List[int]",
+          "default": "None"
+        }
+      },
+      "command_name": "render_preview",
+      "module": "blender_mcp.tools.export",
+      "source_file": "src/blender_mcp/tools/export.py"
+    },
+    "retarget_animation": {
+      "description": "Retarget animation from one armature to another.",
+      "params": {
+        "source_armature": {
+          "required": true,
+          "type": "str"
+        },
+        "target_armature": {
+          "required": true,
+          "type": "str"
+        },
+        "bone_mapping": {
+          "required": false,
+          "type": "Optional[Dict[str, str]]",
+          "default": "None"
+        },
+        "preserve_timing": {
+          "required": false,
+          "type": "bool",
+          "default": "True"
+        }
+      },
+      "command_name": "retarget_animation",
+      "module": "blender_mcp.tools.animation",
+      "source_file": "src/blender_mcp/tools/animation.py"
+    },
+    "review_shot": {
+      "description": "Review and approve/reject a shot version.",
+      "params": {
+        "shot_name": {
+          "required": true,
+          "type": "str"
+        },
+        "version": {
+          "required": true,
+          "type": "str"
+        },
+        "review_type": {
+          "required": false,
+          "type": "str",
+          "default": "'visual'"
+        },
+        "notes": {
+          "required": false,
+          "type": "Optional[str]",
+          "default": "None"
+        },
+        "approved": {
+          "required": false,
+          "type": "bool",
+          "default": "False"
+        }
+      },
+      "command_name": "review_shot",
+      "module": "blender_mcp.tools.production",
+      "source_file": "src/blender_mcp/tools/production.py"
+    },
+    "search_polyhaven_assets": {
+      "description": "Search PolyHaven for assets.",
+      "params": {
+        "asset_type": {
+          "required": false,
+          "type": "str",
+          "default": "'all'"
+        },
+        "categories": {
+          "required": false,
+          "type": "Optional[str]",
+          "default": "None"
+        }
+      },
+      "command_name": "search_polyhaven_assets",
+      "module": "blender_mcp.tools.assets",
+      "source_file": "src/blender_mcp/tools/assets.py"
+    },
+    "search_sketchfab_models": {
+      "description": "Search Sketchfab for models.",
+      "params": {
+        "query": {
+          "required": true,
+          "type": "str"
+        },
+        "categories": {
+          "required": false,
+          "type": "Optional[str]",
+          "default": "None"
+        },
+        "count": {
+          "required": false,
+          "type": "int",
+          "default": "20"
+        },
+        "downloadable": {
+          "required": false,
+          "type": "bool",
+          "default": "True"
+        }
+      },
+      "command_name": "search_sketchfab_models",
+      "module": "blender_mcp.tools.assets",
+      "source_file": "src/blender_mcp/tools/assets.py"
+    },
+    "select_objects": {
+      "description": "Select objects in the scene.",
+      "params": {
+        "ids": {
+          "required": true,
+          "type": "List[str]"
+        },
+        "mode": {
+          "required": false,
+          "type": "str",
+          "default": "'set'"
+        }
+      },
+      "command_name": "select_objects",
+      "module": "blender_mcp.tools.scene_ops",
+      "source_file": "src/blender_mcp/tools/scene_ops.py"
+    },
+    "set_active_camera": {
+      "description": "Set the scene's active camera.",
+      "params": {
+        "camera_name": {
+          "required": true,
+          "type": "str"
+        }
+      },
+      "command_name": "set_active_camera",
+      "module": "blender_mcp.tools.camera",
+      "source_file": "src/blender_mcp/tools/camera.py"
+    },
+    "set_camera_depth_of_field": {
+      "description": "Configure camera depth of field settings.",
+      "params": {
+        "camera_name": {
+          "required": true,
+          "type": "str"
+        },
+        "focus_distance": {
+          "required": false,
+          "type": "Optional[float]",
+          "default": "None"
+        },
+        "focal_length": {
+          "required": false,
+          "type": "Optional[float]",
+          "default": "None"
+        },
+        "aperture": {
+          "required": false,
+          "type": "float",
+          "default": "5.6"
+        }
+      },
+      "command_name": "set_camera_depth_of_field",
+      "module": "blender_mcp.tools.camera",
+      "source_file": "src/blender_mcp/tools/camera.py"
+    },
+    "set_keyframe": {
+      "description": "Set a keyframe for animation.",
+      "params": {
+        "object_name": {
+          "required": true,
+          "type": "str"
+        },
+        "property_path": {
+          "required": true,
+          "type": "str"
+        },
+        "frame": {
+          "required": true,
+          "type": "int"
+        },
+        "value": {
+          "required": true,
+          "type": "Union[float, List[float]]"
+        },
+        "interpolation": {
+          "required": false,
+          "type": "str",
+          "default": "'BEZIER'"
+        }
+      },
+      "command_name": "set_keyframe",
+      "module": "blender_mcp.tools.animation",
+      "source_file": "src/blender_mcp/tools/animation.py"
+    },
+    "set_texture": {
+      "description": "Apply a PolyHaven texture to an object.",
+      "params": {
+        "object_name": {
+          "required": true,
+          "type": "str"
+        },
+        "texture_id": {
+          "required": true,
+          "type": "str"
+        }
+      },
+      "command_name": "set_texture",
+      "module": "blender_mcp.tools.assets",
+      "source_file": "src/blender_mcp/tools/assets.py"
+    },
+    "set_transform": {
+      "description": "Set the transform of an object.",
+      "params": {
+        "target_id": {
+          "required": true,
+          "type": "str"
+        },
+        "location": {
+          "required": false,
+          "type": "Optional[List[float]]",
+          "default": "None"
+        },
+        "rotation": {
+          "required": false,
+          "type": "Optional[List[float]]",
+          "default": "None"
+        },
+        "scale": {
+          "required": false,
+          "type": "Optional[List[float]]",
+          "default": "None"
+        },
+        "apply": {
+          "required": false,
+          "type": "bool",
+          "default": "False"
+        }
+      },
+      "command_name": "set_transform",
+      "module": "blender_mcp.tools.scene_ops",
+      "source_file": "src/blender_mcp/tools/scene_ops.py"
+    },
+    "set_world_hdri": {
+      "description": "Set the world HDRI environment.",
+      "params": {
+        "asset_id": {
+          "required": true,
+          "type": "str"
+        },
+        "resolution": {
+          "required": false,
+          "type": "str",
+          "default": "'2k'"
+        }
+      },
+      "command_name": "set_world_hdri",
+      "module": "blender_mcp.tools.scene_ops",
+      "source_file": "src/blender_mcp/tools/scene_ops.py"
+    },
+    "setup_light_linking": {
+      "description": "Setup light linking for selective illumination.",
+      "params": {
+        "light_objects": {
+          "required": true,
+          "type": "List[str]"
+        },
+        "target_objects": {
+          "required": true,
+          "type": "List[str]"
+        },
+        "link_type": {
+          "required": false,
+          "type": "str",
+          "default": "'include'"
+        }
+      },
+      "command_name": "setup_light_linking",
+      "module": "blender_mcp.tools.lighting",
+      "source_file": "src/blender_mcp/tools/lighting.py"
+    },
+    "setup_render_passes": {
+      "description": "Setup multiple render passes for compositing.",
+      "params": {
+        "passes": {
+          "required": true,
+          "type": "List[str]"
+        },
+        "file_format": {
+          "required": false,
+          "type": "str",
+          "default": "'EXR'"
+        },
+        "color_depth": {
+          "required": false,
+          "type": "str",
+          "default": "'16'"
+        },
+        "compression": {
+          "required": false,
+          "type": "str",
+          "default": "'zip'"
+        }
+      },
+      "command_name": "setup_render_passes",
+      "module": "blender_mcp.tools.export",
+      "source_file": "src/blender_mcp/tools/export.py"
+    },
+    "setup_render_settings": {
+      "description": "Configure render settings for the active scene.",
+      "params": {
+        "engine": {
+          "required": false,
+          "type": "str",
+          "default": "'CYCLES'"
+        },
+        "samples": {
+          "required": false,
+          "type": "int",
+          "default": "128"
+        },
+        "resolution_x": {
+          "required": false,
+          "type": "int",
+          "default": "1920"
+        },
+        "resolution_y": {
+          "required": false,
+          "type": "int",
+          "default": "1080"
+        },
+        "denoise": {
+          "required": false,
+          "type": "bool",
+          "default": "True"
+        }
+      },
+      "command_name": "setup_render_settings",
+      "module": "blender_mcp.tools.composition",
+      "source_file": "src/blender_mcp/tools/composition.py"
+    },
+    "setup_shot_camera": {
+      "description": "Setup camera for a specific shot.",
+      "params": {
+        "shot_name": {
+          "required": true,
+          "type": "str"
+        },
+        "camera_type": {
+          "required": false,
+          "type": "str",
+          "default": "'cinema'"
+        },
+        "focal_length": {
+          "required": false,
+          "type": "float",
+          "default": "35.0"
+        },
+        "aperture": {
+          "required": false,
+          "type": "float",
+          "default": "2.8"
+        },
+        "shot_type": {
+          "required": false,
+          "type": "str",
+          "default": "'wide'"
+        }
+      },
+      "command_name": "setup_shot_camera",
+      "module": "blender_mcp.tools.production",
+      "source_file": "src/blender_mcp/tools/production.py"
+    },
+    "setup_stereoscopic_render": {
+      "description": "Setup stereoscopic rendering for VR/3D content.",
+      "params": {
+        "eye_separation": {
+          "required": false,
+          "type": "float",
+          "default": "0.065"
+        },
+        "convergence_distance": {
+          "required": false,
+          "type": "float",
+          "default": "1.0"
+        },
+        "mode": {
+          "required": false,
+          "type": "str",
+          "default": "'parallel'"
+        }
+      },
+      "command_name": "setup_stereoscopic_render",
+      "module": "blender_mcp.tools.export",
+      "source_file": "src/blender_mcp/tools/export.py"
     }
-  },
-  "notes": [
-    "Blender must be running with the addon enabled (port 9876)",
-    "Use get_polyhaven_status(), get_sketchfab_status(), get_hyper3d_status(), get_hunyuan3d_status() first to check integrations",
-    "Always check world_bounding_box after importing assets",
-    "Break complex operations into smaller steps",
-    "Use asset_creation_strategy() prompt for guidance",
-    "Never use execute_blender_code unless needed",
-    "Prefer atomic tools for predictable behavior",
-    "Use request_id + idempotency keys for reliability",
-    "Verify changes via scene hash + screenshot"
-  ],
-  "connection": {
-    "host": "localhost",
-    "port": 9876,
-    "env": ["BLENDER_HOST", "BLENDER_PORT"]
   }
 }

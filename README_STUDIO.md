@@ -57,7 +57,7 @@ BlenderMCP Studio transforms the basic Blender integration into a professional-g
 ### Standard Installation
 ```bash
 # Install from PyPI
-pip install blender-mcp[studio]
+pip install blender-mcp
 
 # Install development version
 git clone https://github.com/your-org/blender-mcp.git

@@ -43,3 +43,6 @@ logs/
 ehthumbs.db
 Thumbs.db
 venv/*
+
+#Ignore vscode AI rules
+.github\instructions\codacy.instructions.md
