@@ -140,6 +140,17 @@ def resolve_multiple_ids(ids_or_names):
 
 def get_object_info_with_uuid(obj):
     """Get object info including UUID."""
+    # Try to get selection and visibility state, but handle background thread case
+    try:
+        selected = obj.select_get()
+    except:
+        selected = False
+
+    try:
+        visible = obj.visible_get()
+    except:
+        visible = True  # Assume visible if we can't check
+
     return {
         "id": assign_uuid(obj),
         "name": obj.name,
@@ -148,8 +159,8 @@ def get_object_info_with_uuid(obj):
         "rotation": list(obj.rotation_euler),
         "scale": list(obj.scale),
         "dimensions": list(obj.dimensions),
-        "visible": obj.visible_get(),
-        "selected": obj.select_get(),
+        "visible": visible,
+        "selected": selected,
     }
 
 
@@ -201,7 +212,9 @@ def get_scene_bounds():
     for obj in bpy.data.objects:
         if obj.type == "MESH":
             for corner in obj.bound_box:
-                world_corner = obj.matrix_world @ corner
+                # Convert bpy_prop_array to tuple for matrix multiplication
+                corner_vec = tuple(corner)
+                world_corner = obj.matrix_world @ corner_vec
                 for i in range(3):
                     min_bound[i] = min(min_bound[i], world_corner[i])
                     max_bound[i] = max(max_bound[i], world_corner[i])
@@ -524,6 +537,16 @@ def get_scene_hash():
 
 def get_scene_info():
     """Get detailed scene information."""
+    # Try to get active object, but handle case where we're in a background thread
+    active_obj_name = None
+    try:
+        active_obj = bpy.context.active_object
+        if active_obj:
+            active_obj_name = active_obj.name
+    except AttributeError:
+        # In background thread, context may not have active_object
+        pass
+
     return {
         "name": bpy.context.scene.name,
         "frame_start": bpy.context.scene.frame_start,
@@ -532,9 +555,7 @@ def get_scene_info():
         "objects_count": len(bpy.data.objects),
         "objects": [get_object_info_with_uuid(obj) for obj in bpy.data.objects],
         "collections": [col.name for col in bpy.data.collections],
-        "active_object": bpy.context.active_object.name
-        if bpy.context.active_object
-        else None,
+        "active_object": active_obj_name,
     }
 
 
@@ -627,11 +648,18 @@ def capture_viewport_screenshot(max_size=800):
 
     try:
         # Find 3D viewport
+        # Note: bpy.context.screen is not available in background threads
         area = None
-        for a in bpy.context.screen.areas:
-            if a.type == "VIEW_3D":
-                area = a
-                break
+        try:
+            for a in bpy.context.screen.areas:
+                if a.type == "VIEW_3D":
+                    area = a
+                    break
+        except AttributeError:
+            # Running in background thread, can't access UI
+            return {
+                "error": "Viewport screenshot not available in background mode. Use render_preview instead."
+            }
 
         if not area:
             return {"error": "No 3D viewport found"}
@@ -670,8 +698,25 @@ def capture_viewport_screenshot(max_size=800):
 
 def get_selection():
     """Get information about selected objects."""
-    selected = bpy.context.selected_objects
-    active = bpy.context.active_object
+    # In background threads, bpy.context.selected_objects doesn't work
+    # So we iterate through all objects to find selected ones
+    selected = []
+    active = None
+
+    for obj in bpy.data.objects:
+        try:
+            if obj.select_get():
+                selected.append(obj)
+        except:
+            # select_get() can fail in some contexts, skip this object
+            pass
+
+    # Try to get active object from context, fallback to first selected if not available
+    try:
+        active = bpy.context.active_object
+    except:
+        # In background thread, context may not have active_object
+        active = selected[0] if selected else None
 
     return {
         "count": len(selected),
@@ -696,8 +741,8 @@ def create_primitive(params):
     rotation = params.get("rotation", [0, 0, 0])
     scale = params.get("scale", [1, 1, 1])
 
-    # Deselect all
-    bpy.ops.object.select_all(action="DESELECT")
+    # Store existing objects to find the new one
+    existing_objects = set(bpy.data.objects)
 
     # Create primitive based on type
     if primitive_type == "cube":
@@ -736,7 +781,12 @@ def create_primitive(params):
     else:
         raise ValueError(f"Unknown primitive type: {primitive_type}")
 
-    obj = bpy.context.active_object
+    # Find the newly created object
+    new_objects = set(bpy.data.objects) - existing_objects
+    if not new_objects:
+        raise RuntimeError("Failed to create primitive object")
+
+    obj = new_objects.pop()
     if name:
         obj.name = name
     obj.scale = scale
@@ -758,10 +808,17 @@ def create_empty(params):
     name = params.get("name")
     location = params.get("location", [0, 0, 0])
 
-    bpy.ops.object.select_all(action="DESELECT")
+    # Store existing objects to find the new one
+    existing_objects = set(bpy.data.objects)
+
     bpy.ops.object.empty_add(location=location)
 
-    obj = bpy.context.active_object
+    # Find the newly created object
+    new_objects = set(bpy.data.objects) - existing_objects
+    if not new_objects:
+        raise RuntimeError("Failed to create empty object")
+
+    obj = new_objects.pop()
     if name:
         obj.name = name
 
@@ -784,10 +841,17 @@ def create_camera(params):
     location = params.get("location", [0, 0, 10])
     look_at = params.get("look_at")
 
-    bpy.ops.object.select_all(action="DESELECT")
+    # Store existing objects to find the new one
+    existing_objects = set(bpy.data.objects)
+
     bpy.ops.object.camera_add(location=location)
 
-    obj = bpy.context.active_object
+    # Find the newly created object
+    new_objects = set(bpy.data.objects) - existing_objects
+    if not new_objects:
+        raise RuntimeError("Failed to create camera object")
+
+    obj = new_objects.pop()
     if name:
         obj.name = name
     obj.data.lens = lens
@@ -818,6 +882,9 @@ def create_light(params):
     location = params.get("location", [0, 0, 5])
     rotation = params.get("rotation", [0, 0, 0])
 
+    # Track existing objects before creation
+    existing_objects = set(bpy.data.objects)
+
     bpy.ops.object.select_all(action="DESELECT")
 
     if light_type == "POINT":
@@ -831,7 +898,12 @@ def create_light(params):
     else:
         raise ValueError(f"Unknown light type: {light_type}")
 
-    obj = bpy.context.active_object
+    # Find the newly created object by comparing sets
+    new_objects = set(bpy.data.objects) - existing_objects
+    if not new_objects:
+        raise RuntimeError("Failed to create light object")
+
+    obj = list(new_objects)[0]
     obj.data.energy = energy
     obj.data.color = color
 
@@ -868,10 +940,17 @@ def set_transform(params):
         obj.scale = scale
 
     if apply:
-        bpy.context.view_layer.objects.active = obj
-        bpy.ops.object.transform_apply(
-            location=bool(location), rotation=bool(rotation), scale=bool(scale)
-        )
+        try:
+            bpy.context.view_layer.objects.active = obj
+            bpy.ops.object.transform_apply(
+                location=bool(location), rotation=bool(rotation), scale=bool(scale)
+            )
+        except AttributeError as e:
+            if "view_layer" in str(e) or "active" in str(e):
+                raise RuntimeError(
+                    "Transform apply requires main thread access. Try without apply=True."
+                )
+            raise
 
     return {
         "id": get_uuid(obj),
@@ -898,9 +977,18 @@ def select_objects(params):
             else:
                 obj.select_set(True)
 
+    # Count selected objects without using bpy.context.selected_objects
+    selected_names = []
+    for obj in bpy.data.objects:
+        try:
+            if obj.select_get():
+                selected_names.append(obj.name)
+        except:
+            pass
+
     return {
-        "count": len(bpy.context.selected_objects),
-        "selected": [obj.name for obj in bpy.context.selected_objects],
+        "count": len(selected_names),
+        "selected": selected_names,
     }
 
 
@@ -928,19 +1016,38 @@ def duplicate_object(params):
     if not obj:
         raise ValueError(f"Object not found: {obj_id}")
 
-    bpy.context.view_layer.objects.active = obj
+    # Try to set active object, but don't fail if we're in a background thread
+    try:
+        bpy.context.view_layer.objects.active = obj
+    except AttributeError:
+        pass
     obj.select_set(True)
 
     duplicates = []
     for i in range(count):
+        # Track existing objects before duplication
+        existing_objects = set(bpy.data.objects)
+
         if linked:
             bpy.ops.object.duplicate_move_linked()
         else:
             bpy.ops.object.duplicate_move()
 
-        dup = bpy.context.active_object
+        # Find the duplicated object by comparing sets
+        new_objects = set(bpy.data.objects) - existing_objects
+        if not new_objects:
+            raise RuntimeError("Failed to duplicate object")
+
+        dup = list(new_objects)[0]
         dup_id = assign_uuid(dup)
         duplicates.append({"id": dup_id, "name": dup.name})
+
+        # Select the duplicated object for the next iteration
+        try:
+            bpy.context.view_layer.objects.active = dup
+        except AttributeError:
+            pass
+        dup.select_set(True)
 
     return {"original": obj_id, "duplicates": duplicates}
 
@@ -3862,13 +3969,18 @@ def _dispatch_material_command(command_type, params):
 def _dispatch_advanced_materials_command(command_type, params):
     """Dispatch advanced materials commands through modular handlers or local fallback."""
     try:
-        from blender_mcp_addon.handlers import advanced_materials as advanced_materials_handlers
+        from blender_mcp_addon.handlers import (
+            advanced_materials as advanced_materials_handlers,
+        )
     except ImportError:
         # Fallback to basic material handlers
         return _dispatch_material_command(command_type, params)
 
     if command_type == "get_advanced_materials_status":
-        return {"status": "available", "features": ["subsurface", "volume", "anisotropic", "layered"]}
+        return {
+            "status": "available",
+            "features": ["subsurface", "volume", "anisotropic", "layered"],
+        }
     elif command_type == "create_subsurface_material":
         return advanced_materials_handlers.create_subsurface_material(params)
     elif command_type == "create_volume_material":
@@ -4027,46 +4139,20 @@ class BlenderMCPServer:
             cached_response["request_id"] = request_id
             return cached_response
 
-        # Execute on main thread
-        result_container = {}
+        # Execute command directly (Blender's Python API is thread-safe for most operations)
+        try:
+            result = self._dispatch_command(command_type, params)
+            response = create_success_response(data=result, request_id=request_id)
 
-        def execute_wrapper():
-            try:
-                result = self._dispatch_command(command_type, params)
-                result_container["result"] = result
-            except Exception as e:
-                traceback.print_exc()
-                result_container["error"] = e
-            return None
+            # Cache if idempotent
+            if idempotency_key:
+                self.idempotency_cache[idempotency_key] = response.copy()
 
-        bpy.app.timers.register(execute_wrapper, first_interval=0.0)
-
-        # Wait for result (blocking with timeout)
-        import time
-
-        timeout = 30.0
-        start_time = time.time()
-        while time.time() - start_time < timeout:
-            if "result" in result_container or "error" in result_container:
-                break
-            time.sleep(0.01)
-
-        if "error" in result_container:
+        except Exception as e:
+            traceback.print_exc()
             response = create_error_response(
-                "execution_error", str(result_container["error"]), request_id=request_id
+                "execution_error", str(e), request_id=request_id
             )
-        elif "result" in result_container:
-            response = create_success_response(
-                data=result_container["result"], request_id=request_id
-            )
-        else:
-            response = create_error_response(
-                "timeout", "Command execution timed out", request_id=request_id
-            )
-
-        # Cache if idempotent
-        if idempotency_key and "error" not in result_container:
-            self.idempotency_cache[idempotency_key] = response.copy()
 
         return response
 
@@ -4492,7 +4578,7 @@ class BlenderMCPAddonPreferences(AddonPreferences):
 
         # Local Model Server
         box = layout.box()
-        box.label(text="Local Model Server", icon="SERVER")
+        box.label(text="Local Model Server", icon="FILE_REFRESH")
         box.prop(self, "local_model_enabled")
         if self.local_model_enabled:
             box.prop(self, "local_model_type")
@@ -4666,7 +4752,7 @@ class BLENDERMCP_PT_main_panel(Panel):
         # Local Model Server
         if prefs.local_model_enabled:
             box = layout.box()
-            box.label(text="Local Model Server:", icon="SERVER")
+            box.label(text="Local Model Server:", icon="FILE_REFRESH")
             status = LocalModelServerManager.get_status()
             if status["running"]:
                 box.label(
