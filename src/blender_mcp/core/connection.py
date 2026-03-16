@@ -373,7 +373,8 @@ def get_blender_connection() -> BlenderConnection:
 
     if _blender_connection is not None:
         try:
-            _blender_connection.send_command("get_scene_hash", {})
+            # Use a simple ping command for connection testing
+            _blender_connection.send_command("ping", {})
             return _blender_connection
         except BlenderMCPError as e:
             logger.warning(f"Existing connection is no longer valid: {str(e)}")
@@ -387,12 +388,25 @@ def get_blender_connection() -> BlenderConnection:
         host = os.getenv("BLENDER_HOST", DEFAULT_HOST)
         port = int(os.getenv("BLENDER_PORT", DEFAULT_PORT))
         _blender_connection = BlenderConnection(host=host, port=port)
+        
+        # Test connection before proceeding
         if not _blender_connection.connect():
             _blender_connection = None
             raise ConnectionError(
-                "Could not connect to Blender. Make sure the Blender addon is running."
+                f"Could not connect to Blender at {host}:{port}. Make sure the Blender addon is running and the server is started."
             )
-        logger.info("Created new persistent connection to Blender")
+        
+        # Verify the connection works with a simple command
+        try:
+            _blender_connection.send_command("ping", {})
+            logger.info(f"Successfully connected to Blender at {host}:{port}")
+        except Exception as e:
+            logger.error(f"Connection test failed: {str(e)}")
+            _blender_connection.disconnect()
+            _blender_connection = None
+            raise ConnectionError(
+                f"Connected to Blender but communication test failed: {str(e)}"
+            )
 
     return _blender_connection
 

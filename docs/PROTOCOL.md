@@ -1,10 +1,123 @@
-# Blender MCP Protocol Specification
+# Blender MCP Protocol Documentation
 
-## Overview
+This document describes the communication protocols used by Blender MCP.
 
-This document defines the communication protocol between the Python MCP server and the Blender addon.
+**Important**: Blender MCP uses TWO distinct protocols:
 
-## Communication Protocol
+1. **MCP Protocol** (External): The Model Context Protocol that AI assistants use
+2. **Internal Blender Socket Protocol** (Internal): JSON-over-TCP between Python server and Blender addon
+
+---
+
+## Part 1: MCP Protocol (External)
+
+The Model Context Protocol (MCP) is the primary protocol for AI assistants to interact with Blender MCP.
+
+### Transport
+
+- **Protocol**: stdio (Standard Input/Output)
+- **Format**: JSON-RPC 2.0
+- **SDK**: FastMCP (Python MCP SDK)
+
+### Server Capabilities
+
+The MCP server advertises the following capabilities:
+
+```json
+{
+  "protocolVersion": "2024-11-05",
+  "serverInfo": {
+    "name": "BlenderMCP",
+    "version": "1.5.5"
+  },
+  "capabilities": {
+    "tools": { "listChanged": false },
+    "prompts": { "listChanged": false },
+    "resources": { "subscribe": false, "listChanged": false },
+    "completions": {},
+    "logging": {}
+  }
+}
+```
+
+### MCP Features
+
+#### Tools
+
+Tools are invoked via the `tools/call` method. See the tool catalog at `catalog://tools` resource.
+
+Example tool call:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/call",
+  "params": {
+    "name": "get_scene_info",
+    "arguments": {}
+  }
+}
+```
+
+#### Prompts
+
+Prompts are retrieved via the `prompts/get` method.
+
+Available prompts:
+- `asset_creation_strategy`
+- `production_pipeline_strategy`
+- `animation_rigging_strategy`
+- `autonomous_production_workflow`
+
+#### Resources
+
+Resources are accessed via the `resources/read` method.
+
+Static resources:
+- `catalog://tools`
+- `catalog://commands`
+- `catalog://schemas`
+- `catalog://protocol`
+- `catalog://pipeline`
+- `scene://current`
+- `scene://selection`
+- `pipeline://projects`
+- `pipeline://status`
+- `publish://status`
+- `ocio://status`
+- `usd://status`
+
+Resource templates:
+- `repo://tree/{path}`
+- `repo://file/{path}`
+- `scene://object/{object_name}`
+- `pipeline://project/{project_code}`
+- `pipeline://sequence/{sequence_code}`
+- `pipeline://shot/{shot_name}`
+- `pipeline://asset/{asset_type}/{asset_name}`
+- `publish://entity/{entity_type}/{entity_id}`
+- `publish://manifest/{publish_id}`
+- `ocio://project/{project_code}`
+- `usd://package/{package_id}`
+
+#### Completions
+
+Completions are requested via the `completion/complete` method.
+
+Supported completions:
+- Project codes
+- Sequence codes
+- Shot names
+- Asset types and names
+- Object names
+- Colorspaces
+- Tracker adapters
+
+---
+
+## Part 2: Internal Blender Socket Protocol
+
+The internal protocol is used for communication between the Python MCP server and the Blender addon. This is an implementation detail and not part of the public MCP API.
 
 ### Transport
 
@@ -74,164 +187,19 @@ Commands can include an `idempotency_key` to ensure they are executed only once.
 3. Only successful responses are cached
 4. Observation commands should not use idempotency keys
 
-## Command Types
+### Command Types
 
-### Observation Commands
+See the command catalog at `catalog://commands` resource for the full list.
 
-#### `observe_scene`
+Common commands:
+- `observe_scene` - Observe the current scene state
+- `get_scene_info` - Get scene information
+- `get_object_info` - Get object information
+- `create_primitive` - Create a primitive object
+- `set_transform` - Set object transform
+- `export_glb` - Export to GLB format
 
-Observe the current scene state.
-
-**Parameters:**
-```json
-{
-  "detail": "low|med|high",
-  "include_screenshot": false,
-  "max_screenshot_size": 800
-}
-```
-
-**Response:**
-```json
-{
-  "scene_hash": "abc123",
-  "objects": [...],
-  "collections": [...],
-  "cameras": [...],
-  "lights": [...],
-  "world": {...},
-  "render_settings": {...},
-  "bounds": {...}
-}
-```
-
-#### `get_scene_hash`
-
-Get a stable hash of the scene state.
-
-**Response:**
-```json
-{
-  "hash": "abc123def456"
-}
-```
-
-### Scene Operation Commands
-
-#### `create_primitive`
-
-Create a primitive object.
-
-**Parameters:**
-```json
-{
-  "type": "cube|sphere|cylinder|cone|torus|plane",
-  "name": "optional-name",
-  "size": 1.0,
-  "location": [0, 0, 0],
-  "rotation": [0, 0, 0],
-  "scale": [1, 1, 1]
-}
-```
-
-#### `set_transform`
-
-Set object transform.
-
-**Parameters:**
-```json
-{
-  "target_id": "object-name-or-id",
-  "location": [0, 0, 0],
-  "rotation": [0, 0, 0],
-  "scale": [1, 1, 1],
-  "apply": false
-}
-```
-
-### Export Commands
-
-#### `export_glb`
-
-Export to GLB format.
-
-**Parameters:**
-```json
-{
-  "target": "scene|selection|collection",
-  "name": "export",
-  "output_dir": "exports",
-  "draco": true,
-  "texture_embed": true,
-  "y_up": true
-}
-```
-
-#### `export_scene_bundle`
-
-Export complete scene bundle for Next.js.
-
-**Parameters:**
-```json
-{
-  "slug": "scene-name",
-  "nextjs_project_root": "/path/to/project",
-  "mode": "scene|assets",
-  "generate_r3f": false
-}
-```
-
-### Job Commands
-
-#### `create_job`
-
-Create an async AI generation job.
-
-**Parameters:**
-```json
-{
-  "provider": "hyper3d|hunyuan3d",
-  "payload": {
-    "text_prompt": "description",
-    "bbox_condition": [1, 1, 1]
-  }
-}
-```
-
-**Response:**
-```json
-{
-  "job_id": "uuid",
-  "provider": "hyper3d",
-  "status": "pending"
-}
-```
-
-#### `get_job`
-
-Get job status.
-
-**Parameters:**
-```json
-{
-  "job_id": "uuid"
-}
-```
-
-**Response:**
-```json
-{
-  "job_id": "uuid",
-  "provider": "hyper3d",
-  "status": "pending|running|completed|failed",
-  "progress": 0.5,
-  "message": "Processing...",
-  "result": {...},
-  "error": null
-}
-```
-
-## Error Codes
+### Error Codes
 
 | Code | Description |
 |------|-------------|
@@ -242,9 +210,9 @@ Get job status.
 | `not_found` | Requested object/resource not found |
 | `invalid_params` | Invalid or missing parameters |
 
-## Examples
+### Examples
 
-### Basic Command/Response
+#### Basic Command/Response
 
 **Request:**
 ```json
@@ -256,7 +224,7 @@ Get job status.
 {"ok": true, "data": {"objects_count": 5}, "request_id": "req-123"}
 ```
 
-### Error Response
+#### Error Response
 
 **Request:**
 ```json
@@ -268,7 +236,7 @@ Get job status.
 {"ok": false, "error": {"code": "invalid_params", "message": "object_name is required"}, "request_id": "req-456"}
 ```
 
-### Idempotent Command
+#### Idempotent Command
 
 **Request:**
 ```json
@@ -276,6 +244,8 @@ Get job status.
 ```
 
 Duplicate requests with the same `idempotency_key` will return the cached response.
+
+---
 
 ## Implementation Notes
 
@@ -298,3 +268,12 @@ Duplicate requests with the same `idempotency_key` will return the cached respon
 - Server: Thread-safe with connection locking
 - Addon: All Blender operations on main thread
 - Socket: Single-threaded access per connection
+
+---
+
+## Summary
+
+- **AI Assistants** use the **MCP Protocol** (stdio, JSON-RPC)
+- **Internal Communication** uses the **Blender Socket Protocol** (TCP, NDJSON)
+- The MCP server translates between these protocols
+- Resources and Completions are part of MCP, not the internal protocol

@@ -20,8 +20,15 @@ Give feedback, get inspired, and build on top of the MCP: [Discord](https://disc
 
 [Support this project](https://github.com/sponsors/ahujasid)
 
-## Current version(1.5.5)
-- Added Hunyuan3D support
+## Current version(1.6.0)
+- **Studio Pipeline Foundation**: New durable file-backed storage for production entities (Projects, Sequences, Shots, Assets, Publishes)
+- **USD Scaffolding**: Build USD manifests and export packages (works with or without pxr.Usd library)
+- **Color Pipeline**: OCIO/ACES configuration management with colorspace validation
+- **Tracker Integration**: Abstracted tracker adapter supporting local file-based tracking (ShotGrid/AYON/ftrack adapters ready for implementation)
+- **MCP Resources**: Full resource surface with catalog://, scene://, pipeline://, publish://, ocio://, usd:// URIs
+- **MCP Completions**: Auto-completion for projects, shots, assets, colorspaces, and more
+- **Publish Lineage**: Track version history, parent/child relationships, and provenance
+- Hunyuan3D support
 - View screenshots for Blender viewport to better understand the scene
 - Search and download Sketchfab models
 - Support for Poly Haven assets through their API
@@ -81,6 +88,108 @@ result = call_tool("export_scene_bundle", {
 - Optional R3F component generation
 - Cache invalidation support
 
+## Studio Pipeline
+
+BlenderMCP now includes a production-ready pipeline foundation for studio workflows:
+
+### Pipeline Entities
+
+Durable file-backed storage for production management:
+
+```python
+# Create a project
+call_tool("create_project", {"code": "MYPROJECT", "name": "My Project"})
+
+# Create sequences and shots
+call_tool("create_sequence", {"project_code": "MYPROJECT", "code": "SEQ01", "name": "Opening Sequence"})
+call_tool("create_shot_pipeline", {"project_code": "MYPROJECT", "sequence_code": "SEQ01", "shot_name": "sh010", "description": "Hero shot"})
+
+# Create assets
+call_tool("create_asset_pipeline", {"project_code": "MYPROJECT", "asset_type": "character", "asset_name": "hero", "description": "Main character"})
+
+# Create publishes with lineage tracking
+call_tool("create_publish_pipeline", {
+    "entity_type": "shot",
+    "entity_id": "sh010",
+    "stage": "layout",
+    "description": "Initial layout publish"
+})
+```
+
+### USD Scaffolding
+
+Build USD manifests and export packages (works with or without pxr.Usd):
+
+```python
+# Build asset manifest
+call_tool("build_usd_asset_manifest", {
+    "asset_id": "hero_char",
+    "asset_name": "hero",
+    "asset_type": "character",
+    "version": 1
+})
+
+# Export USD package
+call_tool("export_usd_asset_package", {
+    "asset_id": "hero_char",
+    "asset_name": "hero",
+    "asset_type": "character",
+    "output_dir": "/path/to/output"
+})
+```
+
+### Color Pipeline (OCIO/ACES)
+
+Manage project color configuration:
+
+```python
+# Set project color pipeline
+call_tool("set_project_color_pipeline", {
+    "project_code": "MYPROJECT",
+    "working_colorspace": "ACES - ACEScg",
+    "render_colorspace": "ACES - ACEScg",
+    "display_colorspace": "ACES - sRGB"
+})
+
+# Validate color pipeline
+call_tool("validate_color_pipeline", {"project_code": "MYPROJECT"})
+```
+
+### Tracker Integration
+
+Abstracted tracker support with local file-based adapter (ShotGrid/AYON/ftrack ready):
+
+```python
+# Set tracker adapter
+call_tool("set_tracker_adapter_tool", {"adapter_name": "local"})
+
+# Sync project context
+call_tool("sync_project_context", {"project_code": "MYPROJECT"})
+```
+
+### MCP Resources
+
+Access pipeline state through MCP resources:
+
+- `catalog://tools` - Tool catalog
+- `catalog://pipeline` - Pipeline capabilities
+- `pipeline://projects` - List all projects
+- `pipeline://project/{project_code}` - Project details
+- `pipeline://shot/{shot_name}` - Shot details
+- `publish://entity/{entity_type}/{entity_id}` - Entity publishes
+- `ocio://project/{project_code}` - Project color config
+- `usd://package/{package_id}` - USD package
+
+### MCP Completions
+
+Auto-completion support for:
+- Project codes
+- Sequence codes  
+- Shot names
+- Asset types and names
+- Colorspaces
+- Tracker adapters
+
 ### Installating a new version (existing users)
 - For newcomers, you can go straight to Installation. For existing users, see the points below
 - Build or download the packaged `blender_mcp_addon.zip` and install that package in Blender. `addon.py` remains as a legacy compatibility entrypoint only.
@@ -94,6 +203,10 @@ result = call_tool("export_scene_bundle", {
 - **Material control**: Apply and modify materials and colors
 - **Scene inspection**: Get detailed information about the current Blender scene
 - **Code execution**: Run arbitrary Python code in Blender from Claude
+- **Studio Pipeline**: Production-ready entity management (Projects, Sequences, Shots, Assets, Publishes)
+- **USD Support**: Build USD manifests and export asset/shot packages
+- **Color Management**: OCIO/ACES pipeline configuration and validation
+- **Tracker Integration**: Project/shot tracking with pluggable adapters
 
 ## Components
 
@@ -136,11 +249,14 @@ The following environment variables can be used to configure the Blender connect
 
 - `BLENDER_HOST`: Host address for Blender socket server (default: "localhost")
 - `BLENDER_PORT`: Port number for Blender socket server (default: 9876)
+- `BLENDER_MCP_PIPELINE_ROOT`: Pipeline storage root path (default: `~/.blender_mcp/pipeline/`)
+- `DISABLE_TELEMETRY`: Disable all telemetry (set to "true" to disable)
 
 Example:
 ```bash
 export BLENDER_HOST='host.docker.internal'
 export BLENDER_PORT=9876
+export BLENDER_MCP_PIPELINE_ROOT='/mnt/shared/pipeline'
 ```
 
 ### Claude for Desktop Integration

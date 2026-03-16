@@ -114,6 +114,12 @@ class BLENDERMCP_PT_main_panel(Panel):
 
     def draw(self, context):
         layout = self.layout
+
+        # Safety check: ensure settings property is available
+        if not hasattr(context.scene, "blendermcp_settings"):
+            layout.label(text="Loading...", icon="INFO")
+            return
+
         settings = context.scene.blendermcp_settings
 
         # Server status

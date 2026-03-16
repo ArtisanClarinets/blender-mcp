@@ -23,9 +23,11 @@ from . import server
 from . import ui
 
 # Module registration
+# Note: ui must be registered before server to ensure blendermcp_settings
+# property is available before any UI draw calls
 modules = [
-    server,
     ui,
+    server,
 ]
 
 

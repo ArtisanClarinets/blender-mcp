@@ -3,25 +3,80 @@
 ## Project Overview
 
 BlenderMCP connects Blender to AI assistants (Claude, etc.) through the Model Context Protocol (MCP). The project consists of:
+
 - **MCP Server** (`src/blender_mcp/server.py`): Main Python server implementing MCP protocol using `FastMCP`
-- **Blender Addon** (`addon.py`): Runs inside Blender, creates socket server on port 9876
+- **Blender Addon** (`blender_mcp_addon/`): Packaged addon that runs inside Blender, creates socket server on port 9876
+- **Pipeline Domain** (`src/blender_mcp/pipeline/`): Durable file-backed storage for production entities
 - **Telemetry** (`src/blender_mcp/telemetry.py`): Anonymous usage tracking (privacy-focused)
+
+## Architecture
+
+### MCP Protocol vs Internal Blender Protocol
+
+**Important**: This project uses TWO distinct protocols:
+
+1. **MCP Protocol** (External): The Model Context Protocol that AI assistants use to communicate with this server
+   - Transport: stdio (via MCP SDK)
+   - Format: JSON-RPC based
+   - Features: Tools, Prompts, Resources, Completions
+
+2. **Internal Blender Socket Protocol** (Internal): JSON-over-TCP between Python server and Blender addon
+   - Transport: TCP sockets (localhost:9876)
+   - Format: Newline-delimited JSON (NDJSON)
+   - Features: Command dispatch, scene manipulation
+
+The MCP server translates MCP tool calls into internal socket commands sent to the Blender addon.
+
+### Package Structure
+
+```
+src/blender_mcp/
+├── server.py              # Main MCP server with tools, prompts, resources
+├── mcp_compat.py          # MCP SDK compatibility layer
+├── tool_registry.py       # Tool discovery and registry
+├── schemas.py             # Pydantic schemas for validation
+├── protocol.py            # Protocol dataclasses
+├── response.py            # Response helpers
+├── resources.py           # MCP resources implementation
+├── completions.py         # MCP completions implementation
+├── core/
+│   ├── connection.py      # Blender socket connection
+│   └── tool_loader.py     # Dynamic tool module loading
+├── pipeline/              # Pipeline domain
+│   ├── entities.py        # Project, Shot, Asset, Publish entities
+│   ├── storage.py         # File-backed storage
+│   ├── lineage.py         # Publish lineage tracking
+│   ├── publishes.py       # Publish management
+│   ├── usd.py             # USD scaffolding
+│   ├── color.py           # OCIO/ACES scaffolding
+│   └── tracker.py         # Tracker adapter abstraction
+└── tools/                 # MCP tool implementations
+    ├── observe.py         # Scene observation
+    ├── scene_ops.py       # Scene operations
+    ├── production.py      # Production tools (scene-local)
+    ├── pipeline_tools.py  # Pipeline tools (durable storage)
+    ├── usd_tools.py       # USD tools
+    ├── color_tools.py     # Color pipeline tools
+    └── tracker_tools.py   # Tracker integration tools
+```
 
 ## Build & Development Commands
 
 ### Installation
+
 ```bash
 # Install in development mode with uv
-uv pip install -e .
+uv pip install -e ".[dev]"
 
-# Install with all dependencies
-uv pip install -e ".[dev]" 2>/dev/null || uv pip install -e .
+# Or with pip
+pip install -e ".[dev]"
 ```
 
 ### Running the Server
+
 ```bash
 # Run directly
-python main.py
+python -m blender_mcp.server
 
 # Or use the installed script
 blender-mcp
@@ -31,46 +86,263 @@ uvx blender-mcp
 ```
 
 ### Testing
-This project has **no formal test framework** yet. When adding tests:
-```bash
-# Install pytest
-uv pip install pytest pytest-asyncio
 
+```bash
 # Run all tests
 pytest
 
-# Run single test file
-pytest tests/test_server.py
+# Run specific test file
+pytest tests/test_pipeline_entities.py
 
-# Run single test
-pytest tests/test_server.py::test_function_name
+# Run with coverage
+pytest --cov=blender_mcp
 ```
 
 ### Linting & Type Checking
-Currently **no linting tools configured**. Consider adding:
-```bash
-# Install linting tools
-uv pip install ruff mypy
 
+```bash
 # Run ruff
 ruff check src/
+ruff format src/
 
 # Run mypy
 mypy src/
 ```
 
+## MCP Feature Surface
+
+### Tools
+
+Tools are defined in `src/blender_mcp/tools/` and registered via `@mcp.tool()` decorator.
+
+Categories:
+- **Observation**: `get_scene_info`, `observe_scene`, `get_object_info`
+- **Scene Operations**: `create_primitive`, `set_transform`, `assign_material`
+- **Assets**: PolyHaven, Sketchfab, AI generation (Hyper3D, Hunyuan3D)
+- **Lighting**: `create_three_point_lighting`, `create_area_light`
+- **Camera**: `create_composition_camera`, `set_active_camera`
+- **Materials**: `create_bsdf_material`, `create_metal_material`
+- **Export**: `export_glb`, `export_scene_bundle`
+- **Production**: `create_shot`, `create_shot_version`, `review_shot`
+- **Pipeline**: `create_project`, `create_shot_pipeline`, `create_publish_pipeline`
+- **USD**: `build_usd_asset_manifest`, `export_usd_asset_package`
+- **Color**: `get_color_pipeline`, `set_project_color_pipeline`
+- **Tracker**: `get_tracker_status`, `sync_project_context`
+
+### Prompts
+
+Prompts provide strategy guidance for agents:
+
+- `asset_creation_strategy`: Preferred strategy for sourcing assets
+- `production_pipeline_strategy`: Shot management and versioning workflow
+- `animation_rigging_strategy`: Rigging and animation approach
+- `autonomous_production_workflow`: End-to-end production workflow
+
+### Resources
+
+Resources expose machine-readable state:
+
+**Static Resources:**
+- `catalog://tools` - Tool catalog
+- `catalog://commands` - Command catalog
+- `catalog://schemas` - Schema catalog
+- `catalog://protocol` - Protocol capabilities
+- `catalog://pipeline` - Pipeline capabilities
+- `scene://current` - Current scene state
+- `scene://selection` - Selected objects
+- `pipeline://projects` - Pipeline projects
+- `pipeline://status` - Pipeline status
+- `publish://status` - Publish system status
+- `ocio://status` - Color pipeline status
+- `usd://status` - USD system status
+
+**Resource Templates:**
+- `repo://tree/{path}` - Repository tree
+- `repo://file/{path}` - Repository file
+- `scene://object/{object_name}` - Scene object
+- `pipeline://project/{project_code}` - Project details
+- `pipeline://sequence/{sequence_code}` - Sequence details
+- `pipeline://shot/{shot_name}` - Shot details
+- `pipeline://asset/{asset_type}/{asset_name}` - Asset details
+- `publish://entity/{entity_type}/{entity_id}` - Entity publishes
+- `publish://manifest/{publish_id}` - Publish manifest
+- `ocio://project/{project_code}` - Project color config
+- `usd://package/{package_id}` - USD package
+
+### Completions
+
+Completions provide suggestions for:
+
+- Project codes
+- Sequence codes
+- Shot names
+- Asset types and names
+- Object names
+- Colorspaces
+- Tracker adapters
+
+## Pipeline Domain
+
+The pipeline domain provides durable file-backed storage for production entities.
+
+### Entities
+
+- **Project**: Production project with color config
+- **Sequence**: Sequence within a project
+- **Shot**: Shot within a sequence
+- **Asset**: Asset (character, prop, environment, etc.)
+- **Publish**: Published version of an entity
+- **USDPackage**: USD package metadata
+
+### Storage Layout
+
+```
+~/.blender_mcp/pipeline/
+├── projects/
+│   └── {project_code}/
+│       ├── project.json
+│       ├── sequences/{sequence_code}.json
+│       ├── shots/{shot_name}.json
+│       ├── assets/{asset_type}/{asset_name}/asset.json
+│       └── config/color_pipeline.json
+├── publishes/
+│   ├── {publish_id}.json
+│   └── {entity_type}/{entity_id}/v{version:03d}.json
+├── workfiles/
+├── reviews/
+├── usd/
+└── tracker/
+```
+
+### Usage
+
+```python
+from blender_mcp.pipeline import get_pipeline_storage, get_publish_manager
+
+# Get storage
+storage = get_pipeline_storage()
+
+# Create project
+from blender_mcp.pipeline.entities import Project
+project = Project(code="MYPROJECT", name="My Project")
+storage.create_project(project)
+
+# Create publish
+manager = get_publish_manager()
+publish = manager.create_publish(
+    entity_type="shot",
+    entity_id="sh010",
+    stage="layout",
+    description="Initial layout",
+)
+```
+
+## USD Scaffolding
+
+USD support is provided as scaffolding that works with or without the USD library.
+
+### With USD Library (pxr.Usd)
+
+Full USD file generation is available.
+
+### Without USD Library
+
+Placeholder files and manifests are created for future USD processing.
+
+### Usage
+
+```python
+from blender_mcp.pipeline.usd import get_usd_adapter
+
+adapter = get_usd_adapter()
+
+# Build manifest
+manifest = adapter.build_asset_manifest(
+    asset_id="hero_char",
+    asset_name="hero",
+    asset_type="character",
+    version=1,
+)
+
+# Export package
+package = adapter.export_asset_package(
+    asset_id="hero_char",
+    asset_name="hero",
+    asset_type="character",
+    output_dir="/path/to/output",
+)
+```
+
+## Color Pipeline (OCIO/ACES)
+
+Color pipeline configuration with ACES support.
+
+### Features
+
+- Project-level color config
+- Working/render/display colorspace management
+- Texture colorspace tagging
+- OCIO config template generation
+
+### Usage
+
+```python
+from blender_mcp.pipeline.color import get_color_adapter
+
+adapter = get_color_adapter()
+
+# Get config
+config = adapter.get_color_pipeline("MYPROJECT")
+
+# Set config
+adapter.set_project_color_pipeline(
+    project_code="MYPROJECT",
+    working_colorspace="ACES - ACEScg",
+    render_colorspace="ACES - ACEScg",
+)
+
+# Validate
+result = adapter.validate_color_pipeline("MYPROJECT")
+```
+
+## Tracker Integration
+
+Abstracted tracker integration supporting multiple backends.
+
+### Adapters
+
+- **local**: File-based tracker (default)
+- **shotgrid**: Autodesk ShotGrid (placeholder)
+- **ayon**: Ynput AYON (placeholder)
+- **ftrack**: ftrack Studio (placeholder)
+
+### Usage
+
+```python
+from blender_mcp.pipeline.tracker import get_tracker_adapter, set_tracker_adapter
+
+# Set adapter
+adapter = set_tracker_adapter("local")
+
+# Connect
+adapter.connect()
+
+# Get projects
+projects = adapter.get_projects()
+```
+
 ## Code Style Guidelines
 
 ### Language
+
 - Python 3.10+ (check `.python-version`)
 - Type hints required for function signatures
 
 ### Imports
+
 ```python
 # Standard library first
-import socket
 import json
-import asyncio
 from typing import Dict, Any, List
 
 # Then third-party
@@ -82,306 +354,148 @@ from .telemetry_decorator import telemetry_tool
 ```
 
 ### Naming Conventions
+
 - **Classes**: `PascalCase` (e.g., `BlenderConnection`)
 - **Functions/Variables**: `snake_case` (e.g., `get_blender_connection`)
-- **Constants**: `UPPER_SNAKE_CASE` (e.g., `DEFAULT_HOST`, `DEFAULT_PORT`)
+- **Constants**: `UPPER_SNAKE_CASE` (e.g., `DEFAULT_HOST`)
 - **Private members**: Leading underscore (e.g., `_blender_connection`)
 
-### Error Handling
-```python
-try:
-    result = blender.send_command("command", params)
-except Exception as e:
-    logger.error(f"Error doing something: {str(e)}")
-    return f"Error doing something: {str(e)}"
-```
-- Always log errors with descriptive messages
-- Return user-friendly error messages from tool functions
-- Let exceptions propagate for unexpected failures
-
 ### MCP Tool Implementation
+
 ```python
 @telemetry_tool("tool_name")
 @mcp.tool()
-def my_tool(ctx: Context, param: str) -> str:
+async def my_tool(ctx: Context, param: str) -> str:
     """
     Description of what the tool does.
-
+    
     Parameters:
     - param: Description of parameter
+    
+    Returns:
+    - JSON string with result
     """
     try:
-        blender = get_blender_connection()
-        result = blender.send_command("command", {"key": param})
-        return f"Success: {result}"
+        # Implementation
+        result = {"success": True, "data": ...}
+        return json.dumps(result, indent=2)
     except Exception as e:
-        logger.error(f"Error: {str(e)}")
-        return f"Error: {str(e)}"
-```
-
-### Logging
-```python
-logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger("BlenderMCPServer")
+        logger.error(f"Error: {e}")
+        return json.dumps({"error": str(e)})
 ```
 
 ## Adding New MCP Tools
 
 ### Step 1: Define the Tool Function
-Add to `src/blender_mcp/server.py`:
+
+Add to appropriate module in `src/blender_mcp/tools/`:
+
 ```python
 @telemetry_tool("new_tool_name")
 @mcp.tool()
-def new_tool(ctx: Context, parameter: str) -> str:
+async def new_tool(ctx: Context, parameter: str) -> str:
     """Short description of tool."""
     try:
+        from ..core.connection import get_blender_connection
         blender = get_blender_connection()
         result = blender.send_command("command_name", {"param": parameter})
         return json.dumps(result, indent=2)
     except Exception as e:
-        logger.error(f"Error: {str(e)}")
-        return f"Error: {str(e)}"
+        logger.error(f"Error: {e}")
+        return json.dumps({"error": str(e)})
 ```
 
-### Step 2: Update Blender Addon
-Add corresponding command handler in `addon.py`:
+### Step 2: Update Tool Loader
+
+Add module name to `src/blender_mcp/core/tool_loader.py`:
+
 ```python
-elif command_type == "command_name":
-    # Execute Blender API calls
-    return {"status": "success", "result": {...}}
+TOOL_MODULES = [
+    # ... existing modules
+    "new_module",
+]
 ```
 
-### Step 3: Update Documentation
-- Update `asset_creation_strategy()` prompt in `server.py`
-- Update `README.md` with new capabilities
+### Step 3: Update Blender Addon (if needed)
 
-## Architecture Patterns
+Add corresponding command handler in `blender_mcp_addon/command_registry.py`:
 
-### Connection Management
-- Single global `BlenderConnection` instance (`_blender_connection`)
-- Lazy connection with auto-reconnect via `get_blender_connection()`
-- Default host: `localhost`, port: `9876`
-
-### Command Protocol
-JSON over TCP sockets:
 ```python
-# Send
-{"type": "command_name", "params": {"key": "value"}}
-
-# Receive
-{"status": "success", "result": {...}}
-# OR
-{"status": "error", "message": "error description"}
+COMMAND_HANDLERS = {
+    # ... existing handlers
+    "command_name": _attr(module, "handler_function"),
+}
 ```
 
-### Telemetry
-- Anonymous tracking via Supabase
-- Disabled via `DISABLE_TELEMETRY`, `BLENDER_MCP_DISABLE_TELEMETRY`, or `MCP_DISABLE_TELEMETRY`
-- Decorate tools with `@telemetry_tool("tool_name")`
+### Step 4: Add Schema (optional)
+
+Add Pydantic schema to `src/blender_mcp/schemas.py` if strict validation needed.
+
+### Step 5: Test
+
+Add tests to `tests/test_new_module.py`.
 
 ## Environment Variables
+
 - `BLENDER_HOST`: Blender socket host (default: "localhost")
 - `BLENDER_PORT`: Blender socket port (default: 9876)
+- `BLENDER_MCP_PIPELINE_ROOT`: Pipeline storage root path
 - `DISABLE_TELEMETRY`: Disable all telemetry
 
 ## Key Files
-- `src/blender_mcp/server.py:208` - MCP server initialization
-- `src/blender_mcp/server.py:19` - BlenderConnection class
-- `src/blender_mcp/server.py:219` - get_blender_connection()
-- `addon.py` - Blender addon (111KB, socket server)
-- `skills/blender_mcp_client.py` - Agent MCP client tool
-- `skills/blender_mcp.json` - Tool definitions for agent integration
 
-## Agent Tool Integration
+- `src/blender_mcp/server.py` - MCP server initialization
+- `src/blender_mcp/mcp_compat.py` - MCP SDK compatibility
+- `src/blender_mcp/resources.py` - MCP resources
+- `src/blender_mcp/completions.py` - MCP completions
+- `src/blender_mcp/tool_registry.py` - Tool discovery
+- `src/blender_mcp/schemas.py` - Validation schemas
+- `src/blender_mcp/pipeline/` - Pipeline domain
+- `blender_mcp_addon/command_registry.py` - Addon command handlers
+- `blender_mcp_addon/server.py` - Addon socket server
+- `blender_mcp_addon/protocol.py` - Internal protocol
 
-### Using the Blender MCP Client
-Agents can use `skills/blender_mcp_client.py` to call Blender MCP tools:
+## Testing
 
-```python
-from skills.blender_mcp_client import call_tool, TOOLS
+### Unit Tests
 
-# Get available tools
-print(TOOLS.keys())
-
-# Call a tool
-result = call_tool("get_scene_info")
-result = call_tool("get_object_info", {"object_name": "Cube"})
-result = call_tool("download_sketchfab_model", {"uid": "model123", "target_size": 1.0})
+```bash
+pytest tests/test_pipeline_entities.py -v
+pytest tests/test_pipeline_storage.py -v
+pytest tests/test_mcp_resources.py -v
 ```
 
-### Tool Categories
+### Integration Tests
 
-**Scene & Object Inspection:**
-- `get_scene_info()` - Get scene overview
-- `get_object_info(object_name)` - Get object details
-- `get_viewport_screenshot(max_size)` - Capture viewport
-
-**Code Execution:**
-- `execute_blender_code(code)` - Run Python in Blender
-
-**PolyHaven Integration:**
-- `get_polyhaven_status()` - Check if enabled
-- `get_polyhaven_categories(asset_type)` - List categories
-- `search_polyhaven_assets(asset_type, categories)` - Search assets
-- `download_polyhaven_asset(asset_id, asset_type, resolution)` - Import asset
-- `set_texture(object_name, texture_id)` - Apply texture
-
-**Sketchfab Integration:**
-- `get_sketchfab_status()` - Check if enabled
-- `search_sketchfab_models(query, categories, count, downloadable)` - Search
-- `get_sketchfab_model_preview(uid)` - Get thumbnail
-- `download_sketchfab_model(uid, target_size)` - Import model
-
-**Hyper3D Rodin (AI Generation):**
-- `get_hyper3d_status()` - Check if enabled
-- `generate_hyper3d_model_via_text(text_prompt, bbox_condition)` - Generate from text
-- `generate_hyper3d_model_via_images(input_image_paths, input_image_urls, bbox_condition)` - Generate from images
-- `poll_rodin_job_status(subscription_key, request_id)` - Check status
-- `import_generated_asset(name, task_uuid, request_id)` - Import result
-
-**Hunyuan3D (AI Generation):**
-- `get_hunyuan3d_status()` - Check if enabled
-- `generate_hunyuan3d_model(text_prompt, input_image_url)` - Generate model
-- `poll_hunyuan_job_status(job_id)` - Check job status
-- `import_generated_asset_hunyuan(name, zip_file_url)` - Import result
-
-## MCP Prompts and When to Use Them
-
-The server exposes strategy prompts that agents should use for different workflows:
-
-- **asset_creation_strategy** – Use when creating or sourcing 3D assets (models, materials, HDRIs). Prefer PolyHaven, Sketchfab, Hyper3D, Hunyuan3D; fall back to code only when necessary.
-- **production_pipeline_strategy** – Use when managing shots, versions, and review: create_shot, setup_shot_camera, create_shot_version, review_shot, create_render_job, monitor_render_job.
-- **animation_rigging_strategy** – Use when rigging characters and animating: get_rigging_status/get_animation_status, create_auto_rig, set_keyframe, create_animation_layer, etc.
-- **autonomous_production_workflow** – Use for end-to-end production: observe → create shot → layout (assets, camera, lighting) → rigging/animation → shot versions → render setup → review. Emphasizes observe → plan → act → observe and idempotency.
-
-### Command timeouts and idempotency
-
-- **Timeouts**: The addon uses a base command timeout (default 30s, set via `BLENDER_MCP_CMD_TIMEOUT`). Render and export commands get a longer timeout (up to 300s). Clients can pass `timeout_sec` in params (capped at 600s) for heavy operations.
-- **Idempotency**: Pass `idempotency_key` when calling `send_command()` (or equivalent from tools) for create_shot, create_render_job, and other operations that should be safe to retry. The addon caches responses by key and returns the cached result for duplicate requests.
-
-### Production and render pipeline workflow
-
-1. Check `get_production_status()` and `get_render_pipeline_status()`.
-2. Create shots with `create_shot()`; set up cameras with `setup_shot_camera()`.
-3. Use `create_shot_version()` for layout, animation, lighting, render iterations.
-4. Use `create_render_job()` and `monitor_render_job()` for local queue; use export_render_manifest (when available) for farm handoff.
-5. Use `review_shot()` to record approval or feedback.
-
-### Export options
-
-- **GLB / Next.js**: `export_glb`, `export_scene_bundle` (GLB with Draco, manifest, preview, optional R3F components).
-- **Render**: `render_preview`, `setup_render_passes`, `render_animation_passes`; render jobs via `create_render_job`.
-- **Pipeline** (when implemented): USD and Alembic export for interchange and farm rendering; render manifest for external runners.
-
-## Autonomous Agent Guidelines
-
-### Never use execute_blender_code unless needed
-- Prefer atomic tools for predictable behavior
-- Code execution should be last resort
-- Complex operations should be broken down
-
-### Prefer atomic tools
-- Use specific tools like `create_primitive`, `set_transform` instead of code
-- Atomic operations are easier to verify and debug
-- Tools provide structured responses for chaining
-
-### Use request_id + idempotency keys
-- Include `request_id` in all commands
-- Use idempotency keys for repeated operations
-- Enables reliable retries and prevents duplicates
-
-### Verify changes via scene hash + screenshot
-- Always observe before and after changes
-- Use `get_scene_hash()` to detect changes
-- Capture screenshots to verify visual results
-
-### Agent Loop Pattern
+```bash
+# Requires Blender running with addon
+pytest tests/test_server_transport.py -v
 ```
-observe_scene → plan → act → observe_scene…```
-
-### Error Handling
-- Check tool status before execution
-- Handle network errors gracefully
-- Use retries with exponential backoff
-- Provide meaningful error messages to users
-
-### Performance Considerations
-- Batch similar operations when possible
-- Use scene hash to avoid unnecessary operations
-- Cache results for repeated queries
-- Consider network latency for remote connections
-
-### Security
-- Never expose sensitive credentials
-- Validate user inputs before execution
-- Use secure connections when available
-- Monitor for suspicious activity patterns
-
-## Next.js 16 Integration
-
-BlenderMCP supports exporting scenes for Next.js 16 applications:
-
-**Output Convention:**
-```
-your-next-app/public/3d/<slug>/
-├── model.glb
-├── preview.png
-├── manifest.json
-└── components/
-    ├── Scene.tsx
-    ├── Model.tsx
-    └── Camera.tsx
-```
-
-**Key Features:**
-- Export GLB with Draco compression
-- Generate scene manifest with transforms, cameras, lights
-- Render preview thumbnails
-- Optional R3F component generation
-- Cache invalidation support
-
-### Integration Steps
-1. Use `export_scene_bundle()` to export scene
-2. Import into Next.js project
-3. Use generated components in pages
-4. Verify rendering with `observe_scene()`
 
 ## Debugging Tips
 
 ### Connection Issues
-- Verify Blender addon is running
-- Check port 9876 availability
-- Test with simple commands first
-- Check firewall settings
+
+- Verify Blender addon is running (port 9876)
+- Check `BLENDER_HOST` and `BLENDER_PORT` env vars
+- Test with simple `get_scene_info` command first
+
+### Resource Issues
+
+- Check pipeline storage root exists and is writable
+- Verify project/sequence/shot entities exist before referencing
 
 ### Tool Failures
-- Verify required integrations are enabled
-- Check API keys and credentials
-- Test with minimal parameters
-- Review error messages in logs
 
-### Performance Issues
-- Monitor network latency
-- Check Blender memory usage
-- Optimize scene complexity
-- Use caching for repeated operations
-
-## Contributing
-
-When adding new features:
-1. Update tool definitions in `skills/blender_mcp.json`
-2. Add corresponding client functions
-3. Update documentation
-4. Test with autonomous agent patterns
-5. Verify Next.js export compatibility
+- Check tool is registered: `catalog://tools` resource
+- Verify addon command handler exists
+- Review logs for error details
 
 ## Version Compatibility
 
 - Blender 3.0+ required
 - Python 3.10+ required
 - MCP 1.3.0+ required
-- Next.js 16+ for export features
 
 ## License
 

@@ -15,9 +15,12 @@
           "ai_quality_check",
           "ai_scene_composition",
           "apply_camera_preset",
+          "approve_publish",
           "assign_material",
           "assign_material_pbr",
           "auto_weight_paint",
+          "build_usd_asset_manifest",
+          "build_usd_shot_manifest",
           "clear_lights",
           "clear_scene",
           "compose_architectural_shot",
@@ -31,6 +34,7 @@
           "create_animation_curve",
           "create_animation_layer",
           "create_area_light",
+          "create_asset_pipeline",
           "create_auto_rig",
           "create_bsdf_material",
           "create_camera",
@@ -49,10 +53,15 @@
           "create_light",
           "create_material_variations",
           "create_metal_material",
+          "create_ocio_config_template",
           "create_primitive",
           "create_procedural_texture",
+          "create_project",
+          "create_publish_pipeline",
           "create_render_job",
+          "create_sequence",
           "create_shot",
+          "create_shot_pipeline",
           "create_shot_version",
           "create_sky_system",
           "create_studio_light_rig",
@@ -71,7 +80,10 @@
           "duplicate_object",
           "execute_blender_code",
           "export_glb",
+          "export_render_manifest",
           "export_scene_bundle",
+          "export_usd_asset_package",
+          "export_usd_shot_package",
           "frame_camera_to_selection",
           "generate_hunyuan3d_model",
           "generate_hyper3d_model_via_images",
@@ -79,51 +91,83 @@
           "generate_procedural_material",
           "generate_skeleton",
           "generate_tripo3d_model",
+          "get_available_colorspaces",
+          "get_color_pipeline",
           "get_hunyuan3d_status",
           "get_hyper3d_status",
           "get_job",
           "get_object_info",
+          "get_ocio_status",
+          "get_ocio_views",
           "get_polyhaven_categories",
           "get_polyhaven_status",
+          "get_project",
+          "get_publish_lineage",
+          "get_publish_manifest",
           "get_scene_hash",
           "get_scene_info",
           "get_selection",
+          "get_sequence",
           "get_sketchfab_model_preview",
           "get_sketchfab_status",
+          "get_tracker_projects",
+          "get_tracker_shots",
+          "get_tracker_status_tool",
           "get_tripo3d_status",
+          "get_usd_package",
+          "get_usd_status",
           "get_viewport_screenshot",
           "import_generated_asset",
           "import_generated_asset_hunyuan",
           "import_job_result",
           "import_motion_capture",
           "import_tripo3d_model",
+          "list_assets_pipeline",
           "list_cameras",
           "list_lights",
           "list_materials",
+          "list_projects",
+          "list_publishes_pipeline",
+          "list_sequences",
+          "list_shots",
+          "list_shots_pipeline",
+          "list_tracker_adapters",
+          "list_usd_packages",
+          "list_usd_variants",
           "monitor_render_job",
           "observe_scene",
           "optimize_render_settings",
           "poll_hunyuan_job_status",
           "poll_rodin_job_status",
           "poll_tripo3d_status",
+          "prepare_aces_render_outputs",
+          "push_publish_status",
           "render_animation_passes",
           "render_preview",
           "retarget_animation",
           "review_shot",
+          "rollback_publish",
           "search_polyhaven_assets",
           "search_sketchfab_models",
           "select_objects",
           "set_active_camera",
           "set_camera_depth_of_field",
           "set_keyframe",
+          "set_project_color_pipeline",
           "set_texture",
+          "set_tracker_adapter_tool",
           "set_transform",
+          "set_usd_variant_selection",
           "set_world_hdri",
           "setup_light_linking",
           "setup_render_passes",
           "setup_render_settings",
           "setup_shot_camera",
-          "setup_stereoscopic_render"
+          "setup_stereoscopic_render",
+          "sync_project_context",
+          "sync_shot_context",
+          "tag_texture_colorspace",
+          "validate_color_pipeline"
         ]
       },
       "params": {
@@ -153,7 +197,7 @@
       },
       "command_name": "adjust_light_exposure",
       "module": "blender_mcp.tools.lighting",
-      "source_file": "src/blender_mcp/tools/lighting.py"
+      "source_file": "src\\blender_mcp\\tools\\lighting.py"
     },
     "ai_animation_assist": {
       "description": "AI-assisted animation generation.",
@@ -178,7 +222,7 @@
       },
       "command_name": "ai_animation_assist",
       "module": "blender_mcp.tools.ai_creative",
-      "source_file": "src/blender_mcp/tools/ai_creative.py"
+      "source_file": "src\\blender_mcp\\tools\\ai_creative.py"
     },
     "ai_generate_material": {
       "description": "Generate material using AI from text description.",
@@ -204,7 +248,7 @@
       },
       "command_name": "ai_generate_material",
       "module": "blender_mcp.tools.procedural_materials",
-      "source_file": "src/blender_mcp/tools/procedural_materials.py"
+      "source_file": "src\\blender_mcp\\tools\\procedural_materials.py"
     },
     "ai_lighting_design": {
       "description": "Design lighting setup using AI.",
@@ -229,7 +273,7 @@
       },
       "command_name": "ai_lighting_design",
       "module": "blender_mcp.tools.ai_creative",
-      "source_file": "src/blender_mcp/tools/ai_creative.py"
+      "source_file": "src\\blender_mcp\\tools\\ai_creative.py"
     },
     "ai_quality_check": {
       "description": "Perform AI-powered quality checks.",
@@ -251,7 +295,7 @@
       },
       "command_name": "ai_quality_check",
       "module": "blender_mcp.tools.ai_creative",
-      "source_file": "src/blender_mcp/tools/ai_creative.py"
+      "source_file": "src\\blender_mcp\\tools\\ai_creative.py"
     },
     "ai_scene_composition": {
       "description": "Generate scene composition using AI.",
@@ -277,7 +321,7 @@
       },
       "command_name": "ai_scene_composition",
       "module": "blender_mcp.tools.ai_creative",
-      "source_file": "src/blender_mcp/tools/ai_creative.py"
+      "source_file": "src\\blender_mcp\\tools\\ai_creative.py"
     },
     "apply_camera_preset": {
       "description": "Apply a named camera preset.",
@@ -293,7 +337,24 @@
       },
       "command_name": "apply_camera_preset",
       "module": "blender_mcp.tools.camera",
-      "source_file": "src/blender_mcp/tools/camera.py"
+      "source_file": "src\\blender_mcp\\tools\\camera.py"
+    },
+    "approve_publish": {
+      "description": "Approve a pending publish.",
+      "params": {
+        "publish_id": {
+          "required": true,
+          "type": "str"
+        },
+        "notes": {
+          "required": false,
+          "type": "str",
+          "default": "''"
+        }
+      },
+      "command_name": "approve_publish",
+      "module": "blender_mcp.tools.pipeline_tools",
+      "source_file": "src\\blender_mcp\\tools\\pipeline_tools.py"
     },
     "assign_material": {
       "description": "Assign an existing material to an object by name.",
@@ -309,7 +370,7 @@
       },
       "command_name": "assign_material",
       "module": "blender_mcp.tools.materials",
-      "source_file": "src/blender_mcp/tools/materials.py"
+      "source_file": "src\\blender_mcp\\tools\\materials.py"
     },
     "assign_material_pbr": {
       "description": "Assign a PBR material to an object.",
@@ -325,7 +386,7 @@
       },
       "command_name": "assign_material_pbr",
       "module": "blender_mcp.tools.scene_ops",
-      "source_file": "src/blender_mcp/tools/scene_ops.py"
+      "source_file": "src\\blender_mcp\\tools\\scene_ops.py"
     },
     "auto_weight_paint": {
       "description": "Automatically weight paint a mesh to an armature.",
@@ -351,14 +412,94 @@
       },
       "command_name": "auto_weight_paint",
       "module": "blender_mcp.tools.rigging",
-      "source_file": "src/blender_mcp/tools/rigging.py"
+      "source_file": "src\\blender_mcp\\tools\\rigging.py"
+    },
+    "build_usd_asset_manifest": {
+      "description": "Build a USD asset manifest.",
+      "params": {
+        "asset_id": {
+          "required": true,
+          "type": "str"
+        },
+        "asset_name": {
+          "required": true,
+          "type": "str"
+        },
+        "asset_type": {
+          "required": true,
+          "type": "str"
+        },
+        "version": {
+          "required": false,
+          "type": "int",
+          "default": "1"
+        },
+        "geometry_files": {
+          "required": false,
+          "type": "Optional[List[str]]",
+          "default": "None"
+        },
+        "material_files": {
+          "required": false,
+          "type": "Optional[List[str]]",
+          "default": "None"
+        }
+      },
+      "command_name": "build_usd_asset_manifest",
+      "module": "blender_mcp.tools.usd_tools",
+      "source_file": "src\\blender_mcp\\tools\\usd_tools.py"
+    },
+    "build_usd_shot_manifest": {
+      "description": "Build a USD shot manifest.",
+      "params": {
+        "shot_id": {
+          "required": true,
+          "type": "str"
+        },
+        "shot_name": {
+          "required": true,
+          "type": "str"
+        },
+        "sequence_code": {
+          "required": true,
+          "type": "str"
+        },
+        "version": {
+          "required": false,
+          "type": "int",
+          "default": "1"
+        },
+        "frame_start": {
+          "required": false,
+          "type": "int",
+          "default": "1001"
+        },
+        "frame_end": {
+          "required": false,
+          "type": "int",
+          "default": "1100"
+        },
+        "camera_file": {
+          "required": false,
+          "type": "Optional[str]",
+          "default": "None"
+        },
+        "asset_packages": {
+          "required": false,
+          "type": "Optional[List[str]]",
+          "default": "None"
+        }
+      },
+      "command_name": "build_usd_shot_manifest",
+      "module": "blender_mcp.tools.usd_tools",
+      "source_file": "src\\blender_mcp\\tools\\usd_tools.py"
     },
     "clear_lights": {
       "description": "Remove all scene lights.",
       "params": {},
       "command_name": "clear_lights",
       "module": "blender_mcp.tools.lighting",
-      "source_file": "src/blender_mcp/tools/lighting.py"
+      "source_file": "src\\blender_mcp\\tools\\lighting.py"
     },
     "clear_scene": {
       "description": "Remove scene objects while optionally preserving cameras and lights.",
@@ -376,7 +517,7 @@
       },
       "command_name": "clear_scene",
       "module": "blender_mcp.tools.composition",
-      "source_file": "src/blender_mcp/tools/composition.py"
+      "source_file": "src\\blender_mcp\\tools\\composition.py"
     },
     "compose_architectural_shot": {
       "description": "Compose an architectural-shot preset.",
@@ -394,7 +535,7 @@
       },
       "command_name": "compose_architectural_shot",
       "module": "blender_mcp.tools.composition",
-      "source_file": "src/blender_mcp/tools/composition.py"
+      "source_file": "src\\blender_mcp\\tools\\composition.py"
     },
     "compose_automotive_shot": {
       "description": "Compose an automotive-shot preset.",
@@ -417,7 +558,7 @@
       },
       "command_name": "compose_automotive_shot",
       "module": "blender_mcp.tools.composition",
-      "source_file": "src/blender_mcp/tools/composition.py"
+      "source_file": "src\\blender_mcp\\tools\\composition.py"
     },
     "compose_character_scene": {
       "description": "Compose a character-scene preset.",
@@ -440,7 +581,7 @@
       },
       "command_name": "compose_character_scene",
       "module": "blender_mcp.tools.composition",
-      "source_file": "src/blender_mcp/tools/composition.py"
+      "source_file": "src\\blender_mcp\\tools\\composition.py"
     },
     "compose_food_shot": {
       "description": "Compose a food-shot preset.",
@@ -453,7 +594,7 @@
       },
       "command_name": "compose_food_shot",
       "module": "blender_mcp.tools.composition",
-      "source_file": "src/blender_mcp/tools/composition.py"
+      "source_file": "src\\blender_mcp\\tools\\composition.py"
     },
     "compose_isometric_scene": {
       "description": "Compose an isometric scene preset.",
@@ -476,7 +617,7 @@
       },
       "command_name": "compose_isometric_scene",
       "module": "blender_mcp.tools.composition",
-      "source_file": "src/blender_mcp/tools/composition.py"
+      "source_file": "src\\blender_mcp\\tools\\composition.py"
     },
     "compose_jewelry_shot": {
       "description": "Compose a jewelry-shot preset.",
@@ -494,7 +635,7 @@
       },
       "command_name": "compose_jewelry_shot",
       "module": "blender_mcp.tools.composition",
-      "source_file": "src/blender_mcp/tools/composition.py"
+      "source_file": "src\\blender_mcp\\tools\\composition.py"
     },
     "compose_product_shot": {
       "description": "Compose a product-shot scene preset.",
@@ -517,7 +658,7 @@
       },
       "command_name": "compose_product_shot",
       "module": "blender_mcp.tools.composition",
-      "source_file": "src/blender_mcp/tools/composition.py"
+      "source_file": "src\\blender_mcp\\tools\\composition.py"
     },
     "compose_studio_setup": {
       "description": "Compose a studio setup preset.",
@@ -535,7 +676,7 @@
       },
       "command_name": "compose_studio_setup",
       "module": "blender_mcp.tools.composition",
-      "source_file": "src/blender_mcp/tools/composition.py"
+      "source_file": "src\\blender_mcp\\tools\\composition.py"
     },
     "create_animation_curve": {
       "description": "Create an animation curve with multiple keyframes.",
@@ -560,7 +701,7 @@
       },
       "command_name": "create_animation_curve",
       "module": "blender_mcp.tools.animation",
-      "source_file": "src/blender_mcp/tools/animation.py"
+      "source_file": "src\\blender_mcp\\tools\\animation.py"
     },
     "create_animation_layer": {
       "description": "Create an animation layer for non-destructive animation.",
@@ -585,7 +726,7 @@
       },
       "command_name": "create_animation_layer",
       "module": "blender_mcp.tools.animation",
-      "source_file": "src/blender_mcp/tools/animation.py"
+      "source_file": "src\\blender_mcp\\tools\\animation.py"
     },
     "create_area_light": {
       "description": "Create or replace an area light.",
@@ -627,7 +768,32 @@
       },
       "command_name": "create_area_light",
       "module": "blender_mcp.tools.lighting",
-      "source_file": "src/blender_mcp/tools/lighting.py"
+      "source_file": "src\\blender_mcp\\tools\\lighting.py"
+    },
+    "create_asset_pipeline": {
+      "description": "Create a new asset in the pipeline.",
+      "params": {
+        "project_code": {
+          "required": true,
+          "type": "str"
+        },
+        "asset_name": {
+          "required": true,
+          "type": "str"
+        },
+        "asset_type": {
+          "required": true,
+          "type": "str"
+        },
+        "description": {
+          "required": false,
+          "type": "str",
+          "default": "''"
+        }
+      },
+      "command_name": "create_asset_pipeline",
+      "module": "blender_mcp.tools.pipeline_tools",
+      "source_file": "src\\blender_mcp\\tools\\pipeline_tools.py"
     },
     "create_auto_rig": {
       "description": "Create an automated rig for a character.",
@@ -658,7 +824,7 @@
       },
       "command_name": "create_auto_rig",
       "module": "blender_mcp.tools.rigging",
-      "source_file": "src/blender_mcp/tools/rigging.py"
+      "source_file": "src\\blender_mcp\\tools\\rigging.py"
     },
     "create_bsdf_material": {
       "description": "Create or replace a Principled BSDF material.",
@@ -720,7 +886,7 @@
       },
       "command_name": "create_bsdf_material",
       "module": "blender_mcp.tools.materials",
-      "source_file": "src/blender_mcp/tools/materials.py"
+      "source_file": "src\\blender_mcp\\tools\\materials.py"
     },
     "create_camera": {
       "description": "Create a camera in the scene.",
@@ -748,7 +914,7 @@
       },
       "command_name": "create_camera",
       "module": "blender_mcp.tools.scene_ops",
-      "source_file": "src/blender_mcp/tools/scene_ops.py"
+      "source_file": "src\\blender_mcp\\tools\\scene_ops.py"
     },
     "create_composition_camera": {
       "description": "Create or replace a composition camera.",
@@ -781,7 +947,7 @@
       },
       "command_name": "create_composition_camera",
       "module": "blender_mcp.tools.camera",
-      "source_file": "src/blender_mcp/tools/camera.py"
+      "source_file": "src\\blender_mcp\\tools\\camera.py"
     },
     "create_control_rig": {
       "description": "Create a control rig for animation.",
@@ -808,7 +974,7 @@
       },
       "command_name": "create_control_rig",
       "module": "blender_mcp.tools.rigging",
-      "source_file": "src/blender_mcp/tools/rigging.py"
+      "source_file": "src\\blender_mcp\\tools\\rigging.py"
     },
     "create_emission_material": {
       "description": "Create or replace an emission material.",
@@ -834,7 +1000,7 @@
       },
       "command_name": "create_emission_material",
       "module": "blender_mcp.tools.materials",
-      "source_file": "src/blender_mcp/tools/materials.py"
+      "source_file": "src\\blender_mcp\\tools\\materials.py"
     },
     "create_empty": {
       "description": "Create an empty object in the scene.",
@@ -852,7 +1018,7 @@
       },
       "command_name": "create_empty",
       "module": "blender_mcp.tools.scene_ops",
-      "source_file": "src/blender_mcp/tools/scene_ops.py"
+      "source_file": "src\\blender_mcp\\tools\\scene_ops.py"
     },
     "create_facial_animation": {
       "description": "Create facial animation from audio or emotion curves.",
@@ -879,7 +1045,7 @@
       },
       "command_name": "create_facial_animation",
       "module": "blender_mcp.tools.animation",
-      "source_file": "src/blender_mcp/tools/animation.py"
+      "source_file": "src\\blender_mcp\\tools\\animation.py"
     },
     "create_glass_material": {
       "description": "Create or replace a glass material.",
@@ -911,7 +1077,7 @@
       },
       "command_name": "create_glass_material",
       "module": "blender_mcp.tools.materials",
-      "source_file": "src/blender_mcp/tools/materials.py"
+      "source_file": "src\\blender_mcp\\tools\\materials.py"
     },
     "create_hair_material": {
       "description": "Create a realistic hair material.",
@@ -957,7 +1123,7 @@
       },
       "command_name": "create_hair_material",
       "module": "blender_mcp.tools.materials",
-      "source_file": "src/blender_mcp/tools/materials.py"
+      "source_file": "src\\blender_mcp\\tools\\materials.py"
     },
     "create_hdri_environment": {
       "description": "Create an HDRI-style world environment.",
@@ -985,7 +1151,7 @@
       },
       "command_name": "create_hdri_environment",
       "module": "blender_mcp.tools.lighting",
-      "source_file": "src/blender_mcp/tools/lighting.py"
+      "source_file": "src\\blender_mcp\\tools\\lighting.py"
     },
     "create_hdri_lighting_setup": {
       "description": "Create an HDRI-based lighting setup.",
@@ -1018,7 +1184,7 @@
       },
       "command_name": "create_hdri_lighting_setup",
       "module": "blender_mcp.tools.lighting",
-      "source_file": "src/blender_mcp/tools/lighting.py"
+      "source_file": "src\\blender_mcp\\tools\\lighting.py"
     },
     "create_isometric_camera": {
       "description": "Create or replace an isometric camera.",
@@ -1041,7 +1207,7 @@
       },
       "command_name": "create_isometric_camera",
       "module": "blender_mcp.tools.camera",
-      "source_file": "src/blender_mcp/tools/camera.py"
+      "source_file": "src\\blender_mcp\\tools\\camera.py"
     },
     "create_job": {
       "description": "Create a new async job for AI generation.",
@@ -1057,7 +1223,7 @@
       },
       "command_name": "create_job",
       "module": "blender_mcp.tools.jobs",
-      "source_file": "src/blender_mcp/tools/jobs.py"
+      "source_file": "src\\blender_mcp\\tools\\jobs.py"
     },
     "create_layered_material": {
       "description": "Create a multi-layered material system.",
@@ -1082,7 +1248,7 @@
       },
       "command_name": "create_layered_material",
       "module": "blender_mcp.tools.materials",
-      "source_file": "src/blender_mcp/tools/materials.py"
+      "source_file": "src\\blender_mcp\\tools\\materials.py"
     },
     "create_light": {
       "description": "Create a light in the scene.",
@@ -1113,7 +1279,7 @@
       },
       "command_name": "create_light",
       "module": "blender_mcp.tools.scene_ops",
-      "source_file": "src/blender_mcp/tools/scene_ops.py"
+      "source_file": "src\\blender_mcp\\tools\\scene_ops.py"
     },
     "create_material_variations": {
       "description": "Create variations of an existing material.",
@@ -1140,7 +1306,7 @@
       },
       "command_name": "create_material_variations",
       "module": "blender_mcp.tools.procedural_materials",
-      "source_file": "src/blender_mcp/tools/procedural_materials.py"
+      "source_file": "src\\blender_mcp\\tools\\procedural_materials.py"
     },
     "create_metal_material": {
       "description": "Create or replace a metal material.",
@@ -1166,7 +1332,23 @@
       },
       "command_name": "create_metal_material",
       "module": "blender_mcp.tools.materials",
-      "source_file": "src/blender_mcp/tools/materials.py"
+      "source_file": "src\\blender_mcp\\tools\\materials.py"
+    },
+    "create_ocio_config_template": {
+      "description": "Create a basic OCIO config template file.",
+      "params": {
+        "output_path": {
+          "required": true,
+          "type": "str"
+        },
+        "project_name": {
+          "required": true,
+          "type": "str"
+        }
+      },
+      "command_name": "create_ocio_config_template",
+      "module": "blender_mcp.tools.color_tools",
+      "source_file": "src\\blender_mcp\\tools\\color_tools.py"
     },
     "create_primitive": {
       "description": "Create a primitive object in the scene.",
@@ -1203,7 +1385,7 @@
       },
       "command_name": "create_primitive",
       "module": "blender_mcp.tools.scene_ops",
-      "source_file": "src/blender_mcp/tools/scene_ops.py"
+      "source_file": "src\\blender_mcp\\tools\\scene_ops.py"
     },
     "create_procedural_texture": {
       "description": "Create a material driven by a procedural texture node.",
@@ -1239,7 +1421,68 @@
       },
       "command_name": "create_procedural_texture",
       "module": "blender_mcp.tools.materials",
-      "source_file": "src/blender_mcp/tools/materials.py"
+      "source_file": "src\\blender_mcp\\tools\\materials.py"
+    },
+    "create_project": {
+      "description": "Create a new pipeline project.",
+      "params": {
+        "project_code": {
+          "required": true,
+          "type": "str"
+        },
+        "project_name": {
+          "required": true,
+          "type": "str"
+        },
+        "description": {
+          "required": false,
+          "type": "str",
+          "default": "''"
+        },
+        "created_by": {
+          "required": false,
+          "type": "str",
+          "default": "'unknown'"
+        }
+      },
+      "command_name": "create_project",
+      "module": "blender_mcp.tools.pipeline_tools",
+      "source_file": "src\\blender_mcp\\tools\\pipeline_tools.py"
+    },
+    "create_publish_pipeline": {
+      "description": "Create a new publish for an entity.",
+      "params": {
+        "entity_type": {
+          "required": true,
+          "type": "str"
+        },
+        "entity_id": {
+          "required": true,
+          "type": "str"
+        },
+        "stage": {
+          "required": true,
+          "type": "str"
+        },
+        "description": {
+          "required": false,
+          "type": "str",
+          "default": "''"
+        },
+        "created_by": {
+          "required": false,
+          "type": "str",
+          "default": "'unknown'"
+        },
+        "parent_publish_id": {
+          "required": false,
+          "type": "Optional[str]",
+          "default": "None"
+        }
+      },
+      "command_name": "create_publish_pipeline",
+      "module": "blender_mcp.tools.pipeline_tools",
+      "source_file": "src\\blender_mcp\\tools\\pipeline_tools.py"
     },
     "create_render_job": {
       "description": "Create a render farm job.",
@@ -1274,7 +1517,32 @@
       },
       "command_name": "create_render_job",
       "module": "blender_mcp.tools.render_farm",
-      "source_file": "src/blender_mcp/tools/render_farm.py"
+      "source_file": "src\\blender_mcp\\tools\\render_farm.py"
+    },
+    "create_sequence": {
+      "description": "Create a new sequence in a project.",
+      "params": {
+        "project_code": {
+          "required": true,
+          "type": "str"
+        },
+        "sequence_code": {
+          "required": true,
+          "type": "str"
+        },
+        "sequence_name": {
+          "required": true,
+          "type": "str"
+        },
+        "description": {
+          "required": false,
+          "type": "str",
+          "default": "''"
+        }
+      },
+      "command_name": "create_sequence",
+      "module": "blender_mcp.tools.pipeline_tools",
+      "source_file": "src\\blender_mcp\\tools\\pipeline_tools.py"
     },
     "create_shot": {
       "description": "Create a new shot in the production pipeline.",
@@ -1307,7 +1575,46 @@
       },
       "command_name": "create_shot",
       "module": "blender_mcp.tools.production",
-      "source_file": "src/blender_mcp/tools/production.py"
+      "source_file": "src\\blender_mcp\\tools\\production.py"
+    },
+    "create_shot_pipeline": {
+      "description": "Create a new shot in the pipeline (durable storage).",
+      "params": {
+        "project_code": {
+          "required": true,
+          "type": "str"
+        },
+        "sequence_code": {
+          "required": true,
+          "type": "str"
+        },
+        "shot_name": {
+          "required": true,
+          "type": "str"
+        },
+        "shot_number": {
+          "required": true,
+          "type": "int"
+        },
+        "description": {
+          "required": false,
+          "type": "str",
+          "default": "''"
+        },
+        "frame_start": {
+          "required": false,
+          "type": "int",
+          "default": "1001"
+        },
+        "frame_end": {
+          "required": false,
+          "type": "int",
+          "default": "1100"
+        }
+      },
+      "command_name": "create_shot_pipeline",
+      "module": "blender_mcp.tools.pipeline_tools",
+      "source_file": "src\\blender_mcp\\tools\\pipeline_tools.py"
     },
     "create_shot_version": {
       "description": "Create a new version of a shot.",
@@ -1334,7 +1641,7 @@
       },
       "command_name": "create_shot_version",
       "module": "blender_mcp.tools.production",
-      "source_file": "src/blender_mcp/tools/production.py"
+      "source_file": "src\\blender_mcp\\tools\\production.py"
     },
     "create_sky_system": {
       "description": "Create a physically accurate sky system.",
@@ -1367,7 +1674,7 @@
       },
       "command_name": "create_sky_system",
       "module": "blender_mcp.tools.atmospherics",
-      "source_file": "src/blender_mcp/tools/atmospherics.py"
+      "source_file": "src\\blender_mcp\\tools\\atmospherics.py"
     },
     "create_studio_light_rig": {
       "description": "Create a professional studio lighting rig.",
@@ -1400,7 +1707,7 @@
       },
       "command_name": "create_studio_light_rig",
       "module": "blender_mcp.tools.lighting",
-      "source_file": "src/blender_mcp/tools/lighting.py"
+      "source_file": "src\\blender_mcp\\tools\\lighting.py"
     },
     "create_studio_lighting": {
       "description": "Create a named studio lighting preset.",
@@ -1422,7 +1729,7 @@
       },
       "command_name": "create_studio_lighting",
       "module": "blender_mcp.tools.lighting",
-      "source_file": "src/blender_mcp/tools/lighting.py"
+      "source_file": "src\\blender_mcp\\tools\\lighting.py"
     },
     "create_subsurface_material": {
       "description": "Create an advanced subsurface scattering material.",
@@ -1461,7 +1768,7 @@
       },
       "command_name": "create_subsurface_material",
       "module": "blender_mcp.tools.materials",
-      "source_file": "src/blender_mcp/tools/materials.py"
+      "source_file": "src\\blender_mcp\\tools\\materials.py"
     },
     "create_three_point_lighting": {
       "description": "Create a three-point lighting rig.",
@@ -1499,7 +1806,7 @@
       },
       "command_name": "create_three_point_lighting",
       "module": "blender_mcp.tools.lighting",
-      "source_file": "src/blender_mcp/tools/lighting.py"
+      "source_file": "src\\blender_mcp\\tools\\lighting.py"
     },
     "create_volume_material": {
       "description": "Create a volume material for clouds, smoke, or fire.",
@@ -1536,7 +1843,7 @@
       },
       "command_name": "create_volume_material",
       "module": "blender_mcp.tools.materials",
-      "source_file": "src/blender_mcp/tools/materials.py"
+      "source_file": "src\\blender_mcp\\tools\\materials.py"
     },
     "create_volumetric_fog": {
       "description": "Create volumetric fog effect.",
@@ -1569,7 +1876,7 @@
       },
       "command_name": "create_volumetric_fog",
       "module": "blender_mcp.tools.atmospherics",
-      "source_file": "src/blender_mcp/tools/atmospherics.py"
+      "source_file": "src\\blender_mcp\\tools\\atmospherics.py"
     },
     "create_volumetric_light_effect": {
       "description": "Create volumetric lighting effects on a specific light.",
@@ -1601,7 +1908,7 @@
       },
       "command_name": "create_volumetric_light_effect",
       "module": "blender_mcp.tools.lighting",
-      "source_file": "src/blender_mcp/tools/lighting.py"
+      "source_file": "src\\blender_mcp\\tools\\lighting.py"
     },
     "create_volumetric_lighting": {
       "description": "Create volumetric world lighting.",
@@ -1624,7 +1931,7 @@
       },
       "command_name": "create_volumetric_lighting",
       "module": "blender_mcp.tools.lighting",
-      "source_file": "src/blender_mcp/tools/lighting.py"
+      "source_file": "src\\blender_mcp\\tools\\lighting.py"
     },
     "create_weather_system": {
       "description": "Create a weather system with particles and effects.",
@@ -1656,7 +1963,7 @@
       },
       "command_name": "create_weather_system",
       "module": "blender_mcp.tools.atmospherics",
-      "source_file": "src/blender_mcp/tools/atmospherics.py"
+      "source_file": "src\\blender_mcp\\tools\\atmospherics.py"
     },
     "delete_material": {
       "description": "Delete a material by name.",
@@ -1668,7 +1975,7 @@
       },
       "command_name": "delete_material",
       "module": "blender_mcp.tools.materials",
-      "source_file": "src/blender_mcp/tools/materials.py"
+      "source_file": "src\\blender_mcp\\tools\\materials.py"
     },
     "delete_objects": {
       "description": "Delete objects from the scene.",
@@ -1680,7 +1987,7 @@
       },
       "command_name": "delete_objects",
       "module": "blender_mcp.tools.scene_ops",
-      "source_file": "src/blender_mcp/tools/scene_ops.py"
+      "source_file": "src\\blender_mcp\\tools\\scene_ops.py"
     },
     "download_polyhaven_asset": {
       "description": "Download and import a PolyHaven asset.",
@@ -1706,7 +2013,7 @@
       },
       "command_name": "download_polyhaven_asset",
       "module": "blender_mcp.tools.assets",
-      "source_file": "src/blender_mcp/tools/assets.py"
+      "source_file": "src\\blender_mcp\\tools\\assets.py"
     },
     "download_sketchfab_model": {
       "description": "Download and import a Sketchfab model.",
@@ -1723,7 +2030,7 @@
       },
       "command_name": "download_sketchfab_model",
       "module": "blender_mcp.tools.assets",
-      "source_file": "src/blender_mcp/tools/assets.py"
+      "source_file": "src\\blender_mcp\\tools\\assets.py"
     },
     "duplicate_object": {
       "description": "Duplicate an object in the scene.",
@@ -1745,7 +2052,7 @@
       },
       "command_name": "duplicate_object",
       "module": "blender_mcp.tools.scene_ops",
-      "source_file": "src/blender_mcp/tools/scene_ops.py"
+      "source_file": "src\\blender_mcp\\tools\\scene_ops.py"
     },
     "execute_blender_code": {
       "description": "Execute arbitrary Python code in Blender.",
@@ -1757,7 +2064,7 @@
       },
       "command_name": "execute_blender_code",
       "module": "blender_mcp.tools.scene_ops",
-      "source_file": "src/blender_mcp/tools/scene_ops.py"
+      "source_file": "src\\blender_mcp\\tools\\scene_ops.py"
     },
     "export_glb": {
       "description": "Export scene or selection to GLB format.",
@@ -1795,7 +2102,25 @@
       },
       "command_name": "export_glb",
       "module": "blender_mcp.tools.export",
-      "source_file": "src/blender_mcp/tools/export.py"
+      "source_file": "src\\blender_mcp\\tools\\export.py"
+    },
+    "export_render_manifest": {
+      "description": "Export a render job manifest (JSON) for external runners or farm submission.",
+      "params": {
+        "output_path": {
+          "required": false,
+          "type": "Optional[str]",
+          "default": "None"
+        },
+        "include_queued_jobs": {
+          "required": false,
+          "type": "bool",
+          "default": "True"
+        }
+      },
+      "command_name": "export_render_manifest",
+      "module": "blender_mcp.tools.render_farm",
+      "source_file": "src\\blender_mcp\\tools\\render_farm.py"
     },
     "export_scene_bundle": {
       "description": "Export a complete scene bundle for Next.js 16 integration.",
@@ -1821,7 +2146,95 @@
       },
       "command_name": "export_scene_bundle",
       "module": "blender_mcp.tools.export",
-      "source_file": "src/blender_mcp/tools/export.py"
+      "source_file": "src\\blender_mcp\\tools\\export.py"
+    },
+    "export_usd_asset_package": {
+      "description": "Export an asset as a USD package.",
+      "params": {
+        "asset_id": {
+          "required": true,
+          "type": "str"
+        },
+        "asset_name": {
+          "required": true,
+          "type": "str"
+        },
+        "asset_type": {
+          "required": true,
+          "type": "str"
+        },
+        "output_dir": {
+          "required": true,
+          "type": "str"
+        },
+        "version": {
+          "required": false,
+          "type": "int",
+          "default": "1"
+        },
+        "geometry_files": {
+          "required": false,
+          "type": "Optional[List[str]]",
+          "default": "None"
+        },
+        "material_files": {
+          "required": false,
+          "type": "Optional[List[str]]",
+          "default": "None"
+        }
+      },
+      "command_name": "export_usd_asset_package",
+      "module": "blender_mcp.tools.usd_tools",
+      "source_file": "src\\blender_mcp\\tools\\usd_tools.py"
+    },
+    "export_usd_shot_package": {
+      "description": "Export a shot as a USD package.",
+      "params": {
+        "shot_id": {
+          "required": true,
+          "type": "str"
+        },
+        "shot_name": {
+          "required": true,
+          "type": "str"
+        },
+        "sequence_code": {
+          "required": true,
+          "type": "str"
+        },
+        "output_dir": {
+          "required": true,
+          "type": "str"
+        },
+        "version": {
+          "required": false,
+          "type": "int",
+          "default": "1"
+        },
+        "frame_start": {
+          "required": false,
+          "type": "int",
+          "default": "1001"
+        },
+        "frame_end": {
+          "required": false,
+          "type": "int",
+          "default": "1100"
+        },
+        "camera_file": {
+          "required": false,
+          "type": "Optional[str]",
+          "default": "None"
+        },
+        "asset_packages": {
+          "required": false,
+          "type": "Optional[List[str]]",
+          "default": "None"
+        }
+      },
+      "command_name": "export_usd_shot_package",
+      "module": "blender_mcp.tools.usd_tools",
+      "source_file": "src\\blender_mcp\\tools\\usd_tools.py"
     },
     "frame_camera_to_selection": {
       "description": "Frame the named camera to the current selection.",
@@ -1838,7 +2251,7 @@
       },
       "command_name": "frame_camera_to_selection",
       "module": "blender_mcp.tools.camera",
-      "source_file": "src/blender_mcp/tools/camera.py"
+      "source_file": "src\\blender_mcp\\tools\\camera.py"
     },
     "generate_hunyuan3d_model": {
       "description": "Generate 3D model using Hunyuan3D.",
@@ -1856,7 +2269,7 @@
       },
       "command_name": "generate_hunyuan3d_model",
       "module": "blender_mcp.tools.jobs",
-      "source_file": "src/blender_mcp/tools/jobs.py"
+      "source_file": "src\\blender_mcp\\tools\\jobs.py"
     },
     "generate_hyper3d_model_via_images": {
       "description": "Generate 3D model using Hyper3D from images.",
@@ -1879,7 +2292,7 @@
       },
       "command_name": "generate_hyper3d_model_via_images",
       "module": "blender_mcp.tools.jobs",
-      "source_file": "src/blender_mcp/tools/jobs.py"
+      "source_file": "src\\blender_mcp\\tools\\jobs.py"
     },
     "generate_hyper3d_model_via_text": {
       "description": "Generate 3D model using Hyper3D from text prompt.",
@@ -1896,7 +2309,7 @@
       },
       "command_name": "generate_hyper3d_model_via_text",
       "module": "blender_mcp.tools.jobs",
-      "source_file": "src/blender_mcp/tools/jobs.py"
+      "source_file": "src\\blender_mcp\\tools\\jobs.py"
     },
     "generate_procedural_material": {
       "description": "Generate a procedural material based on type and parameters.",
@@ -1927,7 +2340,7 @@
       },
       "command_name": "generate_procedural_material",
       "module": "blender_mcp.tools.procedural_materials",
-      "source_file": "src/blender_mcp/tools/procedural_materials.py"
+      "source_file": "src\\blender_mcp\\tools\\procedural_materials.py"
     },
     "generate_skeleton": {
       "description": "Generate a skeleton based on mesh analysis.",
@@ -1953,7 +2366,7 @@
       },
       "command_name": "generate_skeleton",
       "module": "blender_mcp.tools.rigging",
-      "source_file": "src/blender_mcp/tools/rigging.py"
+      "source_file": "src\\blender_mcp\\tools\\rigging.py"
     },
     "generate_tripo3d_model": {
       "description": "Generate a Tripo3D model from text or image input.",
@@ -1971,21 +2384,40 @@
       },
       "command_name": "generate_tripo3d_model",
       "module": "blender_mcp.tools.tripo3d",
-      "source_file": "src/blender_mcp/tools/tripo3d.py"
+      "source_file": "src\\blender_mcp\\tools\\tripo3d.py"
+    },
+    "get_available_colorspaces": {
+      "description": "Get list of available colorspaces.",
+      "params": {},
+      "command_name": "get_available_colorspaces",
+      "module": "blender_mcp.tools.color_tools",
+      "source_file": "src\\blender_mcp\\tools\\color_tools.py"
+    },
+    "get_color_pipeline": {
+      "description": "Get the color pipeline configuration for a project.",
+      "params": {
+        "project_code": {
+          "required": true,
+          "type": "str"
+        }
+      },
+      "command_name": "get_color_pipeline",
+      "module": "blender_mcp.tools.color_tools",
+      "source_file": "src\\blender_mcp\\tools\\color_tools.py"
     },
     "get_hunyuan3d_status": {
       "description": "Check Hunyuan3D integration status.",
       "params": {},
       "command_name": "get_hunyuan3d_status",
       "module": "blender_mcp.tools.jobs",
-      "source_file": "src/blender_mcp/tools/jobs.py"
+      "source_file": "src\\blender_mcp\\tools\\jobs.py"
     },
     "get_hyper3d_status": {
       "description": "Check Hyper3D Rodin integration status.",
       "params": {},
       "command_name": "get_hyper3d_status",
       "module": "blender_mcp.tools.jobs",
-      "source_file": "src/blender_mcp/tools/jobs.py"
+      "source_file": "src\\blender_mcp\\tools\\jobs.py"
     },
     "get_job": {
       "description": "Get the status of a job.",
@@ -1997,7 +2429,7 @@
       },
       "command_name": "get_job",
       "module": "blender_mcp.tools.jobs",
-      "source_file": "src/blender_mcp/tools/jobs.py"
+      "source_file": "src\\blender_mcp\\tools\\jobs.py"
     },
     "get_object_info": {
       "description": "Get detailed information about a specific object.",
@@ -2009,7 +2441,26 @@
       },
       "command_name": "get_object_info",
       "module": "blender_mcp.tools.observe",
-      "source_file": "src/blender_mcp/tools/observe.py"
+      "source_file": "src\\blender_mcp\\tools\\observe.py"
+    },
+    "get_ocio_status": {
+      "description": "Get OCIO system status.",
+      "params": {},
+      "command_name": "get_ocio_status",
+      "module": "blender_mcp.tools.color_tools",
+      "source_file": "src\\blender_mcp\\tools\\color_tools.py"
+    },
+    "get_ocio_views": {
+      "description": "Get available display/view combinations.",
+      "params": {
+        "project_code": {
+          "required": true,
+          "type": "str"
+        }
+      },
+      "command_name": "get_ocio_views",
+      "module": "blender_mcp.tools.color_tools",
+      "source_file": "src\\blender_mcp\\tools\\color_tools.py"
     },
     "get_polyhaven_categories": {
       "description": "Get categories for PolyHaven assets.",
@@ -2022,35 +2473,93 @@
       },
       "command_name": "get_polyhaven_categories",
       "module": "blender_mcp.tools.assets",
-      "source_file": "src/blender_mcp/tools/assets.py"
+      "source_file": "src\\blender_mcp\\tools\\assets.py"
     },
     "get_polyhaven_status": {
       "description": "Check PolyHaven integration status.",
       "params": {},
       "command_name": "get_polyhaven_status",
       "module": "blender_mcp.tools.assets",
-      "source_file": "src/blender_mcp/tools/assets.py"
+      "source_file": "src\\blender_mcp\\tools\\assets.py"
+    },
+    "get_project": {
+      "description": "Get project details.",
+      "params": {
+        "project_code": {
+          "required": true,
+          "type": "str"
+        }
+      },
+      "command_name": "get_project",
+      "module": "blender_mcp.tools.pipeline_tools",
+      "source_file": "src\\blender_mcp\\tools\\pipeline_tools.py"
+    },
+    "get_publish_lineage": {
+      "description": "Get the lineage for a publish.",
+      "params": {
+        "publish_id": {
+          "required": true,
+          "type": "str"
+        },
+        "direction": {
+          "required": false,
+          "type": "str",
+          "default": "'both'"
+        },
+        "max_depth": {
+          "required": false,
+          "type": "int",
+          "default": "10"
+        }
+      },
+      "command_name": "get_publish_lineage",
+      "module": "blender_mcp.tools.pipeline_tools",
+      "source_file": "src\\blender_mcp\\tools\\pipeline_tools.py"
+    },
+    "get_publish_manifest": {
+      "description": "Get the complete manifest for a publish.",
+      "params": {
+        "publish_id": {
+          "required": true,
+          "type": "str"
+        }
+      },
+      "command_name": "get_publish_manifest",
+      "module": "blender_mcp.tools.pipeline_tools",
+      "source_file": "src\\blender_mcp\\tools\\pipeline_tools.py"
     },
     "get_scene_hash": {
       "description": "Get a stable hash of the current scene state.",
       "params": {},
       "command_name": "get_scene_hash",
       "module": "blender_mcp.tools.observe",
-      "source_file": "src/blender_mcp/tools/observe.py"
+      "source_file": "src\\blender_mcp\\tools\\observe.py"
     },
     "get_scene_info": {
       "description": "Get detailed information about the current Blender scene.",
       "params": {},
       "command_name": "get_scene_info",
       "module": "blender_mcp.tools.observe",
-      "source_file": "src/blender_mcp/tools/observe.py"
+      "source_file": "src\\blender_mcp\\tools\\observe.py"
     },
     "get_selection": {
       "description": "Get information about currently selected objects.",
       "params": {},
       "command_name": "get_selection",
       "module": "blender_mcp.tools.observe",
-      "source_file": "src/blender_mcp/tools/observe.py"
+      "source_file": "src\\blender_mcp\\tools\\observe.py"
+    },
+    "get_sequence": {
+      "description": "Get all shots in a sequence.",
+      "params": {
+        "sequence_name": {
+          "required": true,
+          "type": "str"
+        }
+      },
+      "command_name": "get_sequence",
+      "module": "blender_mcp.tools.production",
+      "source_file": "src\\blender_mcp\\tools\\production.py"
     },
     "get_sketchfab_model_preview": {
       "description": "Get preview thumbnail of a Sketchfab model.",
@@ -2062,21 +2571,66 @@
       },
       "command_name": "get_sketchfab_model_preview",
       "module": "blender_mcp.tools.assets",
-      "source_file": "src/blender_mcp/tools/assets.py"
+      "source_file": "src\\blender_mcp\\tools\\assets.py"
     },
     "get_sketchfab_status": {
       "description": "Check Sketchfab integration status.",
       "params": {},
       "command_name": "get_sketchfab_status",
       "module": "blender_mcp.tools.assets",
-      "source_file": "src/blender_mcp/tools/assets.py"
+      "source_file": "src\\blender_mcp\\tools\\assets.py"
+    },
+    "get_tracker_projects": {
+      "description": "Get projects from the tracker.",
+      "params": {},
+      "command_name": "get_tracker_projects",
+      "module": "blender_mcp.tools.tracker_tools",
+      "source_file": "src\\blender_mcp\\tools\\tracker_tools.py"
+    },
+    "get_tracker_shots": {
+      "description": "Get shots from the tracker for a sequence.",
+      "params": {
+        "sequence_id": {
+          "required": true,
+          "type": "str"
+        }
+      },
+      "command_name": "get_tracker_shots",
+      "module": "blender_mcp.tools.tracker_tools",
+      "source_file": "src\\blender_mcp\\tools\\tracker_tools.py"
+    },
+    "get_tracker_status_tool": {
+      "description": "Get the current tracker status.",
+      "params": {},
+      "command_name": "get_tracker_status_tool",
+      "module": "blender_mcp.tools.tracker_tools",
+      "source_file": "src\\blender_mcp\\tools\\tracker_tools.py"
     },
     "get_tripo3d_status": {
       "description": "Check Tripo3D integration status.",
       "params": {},
       "command_name": "get_tripo3d_status",
       "module": "blender_mcp.tools.tripo3d",
-      "source_file": "src/blender_mcp/tools/tripo3d.py"
+      "source_file": "src\\blender_mcp\\tools\\tripo3d.py"
+    },
+    "get_usd_package": {
+      "description": "Get a USD package by ID.",
+      "params": {
+        "package_id": {
+          "required": true,
+          "type": "str"
+        }
+      },
+      "command_name": "get_usd_package",
+      "module": "blender_mcp.tools.usd_tools",
+      "source_file": "src\\blender_mcp\\tools\\usd_tools.py"
+    },
+    "get_usd_status": {
+      "description": "Get USD system status.",
+      "params": {},
+      "command_name": "get_usd_status",
+      "module": "blender_mcp.tools.usd_tools",
+      "source_file": "src\\blender_mcp\\tools\\usd_tools.py"
     },
     "get_viewport_screenshot": {
       "description": "Capture a screenshot of the current Blender 3D viewport.",
@@ -2089,7 +2643,7 @@
       },
       "command_name": "get_viewport_screenshot",
       "module": "blender_mcp.tools.observe",
-      "source_file": "src/blender_mcp/tools/observe.py"
+      "source_file": "src\\blender_mcp\\tools\\observe.py"
     },
     "import_generated_asset": {
       "description": "Import Hyper3D generated asset.",
@@ -2111,7 +2665,7 @@
       },
       "command_name": "import_generated_asset",
       "module": "blender_mcp.tools.jobs",
-      "source_file": "src/blender_mcp/tools/jobs.py"
+      "source_file": "src\\blender_mcp\\tools\\jobs.py"
     },
     "import_generated_asset_hunyuan": {
       "description": "Import Hunyuan3D generated asset.",
@@ -2127,7 +2681,7 @@
       },
       "command_name": "import_generated_asset_hunyuan",
       "module": "blender_mcp.tools.jobs",
-      "source_file": "src/blender_mcp/tools/jobs.py"
+      "source_file": "src\\blender_mcp\\tools\\jobs.py"
     },
     "import_job_result": {
       "description": "Import the result of a completed job.",
@@ -2148,7 +2702,7 @@
       },
       "command_name": "import_job_result",
       "module": "blender_mcp.tools.jobs",
-      "source_file": "src/blender_mcp/tools/jobs.py"
+      "source_file": "src\\blender_mcp\\tools\\jobs.py"
     },
     "import_motion_capture": {
       "description": "Import motion capture data to an armature.",
@@ -2174,7 +2728,7 @@
       },
       "command_name": "import_motion_capture",
       "module": "blender_mcp.tools.animation",
-      "source_file": "src/blender_mcp/tools/animation.py"
+      "source_file": "src\\blender_mcp\\tools\\animation.py"
     },
     "import_tripo3d_model": {
       "description": "Import a generated Tripo3D model.",
@@ -2191,28 +2745,152 @@
       },
       "command_name": "import_tripo3d_model",
       "module": "blender_mcp.tools.tripo3d",
-      "source_file": "src/blender_mcp/tools/tripo3d.py"
+      "source_file": "src\\blender_mcp\\tools\\tripo3d.py"
+    },
+    "list_assets_pipeline": {
+      "description": "List assets in the pipeline.",
+      "params": {
+        "project_code": {
+          "required": true,
+          "type": "str"
+        },
+        "asset_type": {
+          "required": false,
+          "type": "Optional[str]",
+          "default": "None"
+        }
+      },
+      "command_name": "list_assets_pipeline",
+      "module": "blender_mcp.tools.pipeline_tools",
+      "source_file": "src\\blender_mcp\\tools\\pipeline_tools.py"
     },
     "list_cameras": {
       "description": "List cameras in the active scene.",
       "params": {},
       "command_name": "list_cameras",
       "module": "blender_mcp.tools.camera",
-      "source_file": "src/blender_mcp/tools/camera.py"
+      "source_file": "src\\blender_mcp\\tools\\camera.py"
     },
     "list_lights": {
       "description": "List scene lights.",
       "params": {},
       "command_name": "list_lights",
       "module": "blender_mcp.tools.lighting",
-      "source_file": "src/blender_mcp/tools/lighting.py"
+      "source_file": "src\\blender_mcp\\tools\\lighting.py"
     },
     "list_materials": {
       "description": "List scene materials.",
       "params": {},
       "command_name": "list_materials",
       "module": "blender_mcp.tools.materials",
-      "source_file": "src/blender_mcp/tools/materials.py"
+      "source_file": "src\\blender_mcp\\tools\\materials.py"
+    },
+    "list_projects": {
+      "description": "List all pipeline projects.",
+      "params": {},
+      "command_name": "list_projects",
+      "module": "blender_mcp.tools.pipeline_tools",
+      "source_file": "src\\blender_mcp\\tools\\pipeline_tools.py"
+    },
+    "list_publishes_pipeline": {
+      "description": "List publishes for an entity.",
+      "params": {
+        "entity_type": {
+          "required": true,
+          "type": "str"
+        },
+        "entity_id": {
+          "required": true,
+          "type": "str"
+        },
+        "stage": {
+          "required": false,
+          "type": "Optional[str]",
+          "default": "None"
+        }
+      },
+      "command_name": "list_publishes_pipeline",
+      "module": "blender_mcp.tools.pipeline_tools",
+      "source_file": "src\\blender_mcp\\tools\\pipeline_tools.py"
+    },
+    "list_sequences": {
+      "description": "List all sequences in a project.",
+      "params": {
+        "project_code": {
+          "required": true,
+          "type": "str"
+        }
+      },
+      "command_name": "list_sequences",
+      "module": "blender_mcp.tools.pipeline_tools",
+      "source_file": "src\\blender_mcp\\tools\\pipeline_tools.py"
+    },
+    "list_shots": {
+      "description": "List all shots, optionally filtered by sequence.",
+      "params": {
+        "sequence_name": {
+          "required": false,
+          "type": "Optional[str]",
+          "default": "None"
+        }
+      },
+      "command_name": "list_shots",
+      "module": "blender_mcp.tools.production",
+      "source_file": "src\\blender_mcp\\tools\\production.py"
+    },
+    "list_shots_pipeline": {
+      "description": "List shots in the pipeline.",
+      "params": {
+        "project_code": {
+          "required": true,
+          "type": "str"
+        },
+        "sequence_code": {
+          "required": false,
+          "type": "Optional[str]",
+          "default": "None"
+        }
+      },
+      "command_name": "list_shots_pipeline",
+      "module": "blender_mcp.tools.pipeline_tools",
+      "source_file": "src\\blender_mcp\\tools\\pipeline_tools.py"
+    },
+    "list_tracker_adapters": {
+      "description": "List available tracker adapters.",
+      "params": {},
+      "command_name": "list_tracker_adapters",
+      "module": "blender_mcp.tools.tracker_tools",
+      "source_file": "src\\blender_mcp\\tools\\tracker_tools.py"
+    },
+    "list_usd_packages": {
+      "description": "List USD packages.",
+      "params": {
+        "entity_type": {
+          "required": false,
+          "type": "Optional[str]",
+          "default": "None"
+        },
+        "entity_id": {
+          "required": false,
+          "type": "Optional[str]",
+          "default": "None"
+        }
+      },
+      "command_name": "list_usd_packages",
+      "module": "blender_mcp.tools.usd_tools",
+      "source_file": "src\\blender_mcp\\tools\\usd_tools.py"
+    },
+    "list_usd_variants": {
+      "description": "List variants for a USD package.",
+      "params": {
+        "package_id": {
+          "required": true,
+          "type": "str"
+        }
+      },
+      "command_name": "list_usd_variants",
+      "module": "blender_mcp.tools.usd_tools",
+      "source_file": "src\\blender_mcp\\tools\\usd_tools.py"
     },
     "monitor_render_job": {
       "description": "Monitor render job progress.",
@@ -2224,7 +2902,7 @@
       },
       "command_name": "monitor_render_job",
       "module": "blender_mcp.tools.render_farm",
-      "source_file": "src/blender_mcp/tools/render_farm.py"
+      "source_file": "src\\blender_mcp\\tools\\render_farm.py"
     },
     "observe_scene": {
       "description": "Observe the current scene state with configurable detail level.",
@@ -2247,7 +2925,7 @@
       },
       "command_name": "observe_scene",
       "module": "blender_mcp.tools.observe",
-      "source_file": "src/blender_mcp/tools/observe.py"
+      "source_file": "src\\blender_mcp\\tools\\observe.py"
     },
     "optimize_render_settings": {
       "description": "Optimize render settings for quality/time balance.",
@@ -2270,7 +2948,7 @@
       },
       "command_name": "optimize_render_settings",
       "module": "blender_mcp.tools.render_farm",
-      "source_file": "src/blender_mcp/tools/render_farm.py"
+      "source_file": "src\\blender_mcp\\tools\\render_farm.py"
     },
     "poll_hunyuan_job_status": {
       "description": "Check Hunyuan3D job status.",
@@ -2282,7 +2960,7 @@
       },
       "command_name": "poll_hunyuan_job_status",
       "module": "blender_mcp.tools.jobs",
-      "source_file": "src/blender_mcp/tools/jobs.py"
+      "source_file": "src\\blender_mcp\\tools\\jobs.py"
     },
     "poll_rodin_job_status": {
       "description": "Check Hyper3D generation task status.",
@@ -2300,7 +2978,7 @@
       },
       "command_name": "poll_rodin_job_status",
       "module": "blender_mcp.tools.jobs",
-      "source_file": "src/blender_mcp/tools/jobs.py"
+      "source_file": "src\\blender_mcp\\tools\\jobs.py"
     },
     "poll_tripo3d_status": {
       "description": "Poll a Tripo3D generation task.",
@@ -2312,7 +2990,40 @@
       },
       "command_name": "poll_tripo3d_status",
       "module": "blender_mcp.tools.tripo3d",
-      "source_file": "src/blender_mcp/tools/tripo3d.py"
+      "source_file": "src\\blender_mcp\\tools\\tripo3d.py"
+    },
+    "prepare_aces_render_outputs": {
+      "description": "Prepare render output configuration for ACES workflow.",
+      "params": {
+        "project_code": {
+          "required": true,
+          "type": "str"
+        },
+        "output_paths": {
+          "required": true,
+          "type": "List[str]"
+        },
+        "file_format": {
+          "required": false,
+          "type": "str",
+          "default": "'EXR'"
+        }
+      },
+      "command_name": "prepare_aces_render_outputs",
+      "module": "blender_mcp.tools.color_tools",
+      "source_file": "src\\blender_mcp\\tools\\color_tools.py"
+    },
+    "push_publish_status": {
+      "description": "Push publish status to the tracker.",
+      "params": {
+        "publish_id": {
+          "required": true,
+          "type": "str"
+        }
+      },
+      "command_name": "push_publish_status",
+      "module": "blender_mcp.tools.tracker_tools",
+      "source_file": "src\\blender_mcp\\tools\\tracker_tools.py"
     },
     "render_animation_passes": {
       "description": "Render animation with multiple passes.",
@@ -2342,7 +3053,7 @@
       },
       "command_name": "render_animation_passes",
       "module": "blender_mcp.tools.export",
-      "source_file": "src/blender_mcp/tools/export.py"
+      "source_file": "src\\blender_mcp\\tools\\export.py"
     },
     "render_preview": {
       "description": "Render a preview image of the scene.",
@@ -2364,7 +3075,7 @@
       },
       "command_name": "render_preview",
       "module": "blender_mcp.tools.export",
-      "source_file": "src/blender_mcp/tools/export.py"
+      "source_file": "src\\blender_mcp\\tools\\export.py"
     },
     "retarget_animation": {
       "description": "Retarget animation from one armature to another.",
@@ -2390,7 +3101,7 @@
       },
       "command_name": "retarget_animation",
       "module": "blender_mcp.tools.animation",
-      "source_file": "src/blender_mcp/tools/animation.py"
+      "source_file": "src\\blender_mcp\\tools\\animation.py"
     },
     "review_shot": {
       "description": "Review and approve/reject a shot version.",
@@ -2421,7 +3132,27 @@
       },
       "command_name": "review_shot",
       "module": "blender_mcp.tools.production",
-      "source_file": "src/blender_mcp/tools/production.py"
+      "source_file": "src\\blender_mcp\\tools\\production.py"
+    },
+    "rollback_publish": {
+      "description": "Rollback to a specific publish version.",
+      "params": {
+        "entity_type": {
+          "required": true,
+          "type": "str"
+        },
+        "entity_id": {
+          "required": true,
+          "type": "str"
+        },
+        "target_version": {
+          "required": true,
+          "type": "int"
+        }
+      },
+      "command_name": "rollback_publish",
+      "module": "blender_mcp.tools.pipeline_tools",
+      "source_file": "src\\blender_mcp\\tools\\pipeline_tools.py"
     },
     "search_polyhaven_assets": {
       "description": "Search PolyHaven for assets.",
@@ -2439,7 +3170,7 @@
       },
       "command_name": "search_polyhaven_assets",
       "module": "blender_mcp.tools.assets",
-      "source_file": "src/blender_mcp/tools/assets.py"
+      "source_file": "src\\blender_mcp\\tools\\assets.py"
     },
     "search_sketchfab_models": {
       "description": "Search Sketchfab for models.",
@@ -2466,7 +3197,7 @@
       },
       "command_name": "search_sketchfab_models",
       "module": "blender_mcp.tools.assets",
-      "source_file": "src/blender_mcp/tools/assets.py"
+      "source_file": "src\\blender_mcp\\tools\\assets.py"
     },
     "select_objects": {
       "description": "Select objects in the scene.",
@@ -2483,7 +3214,7 @@
       },
       "command_name": "select_objects",
       "module": "blender_mcp.tools.scene_ops",
-      "source_file": "src/blender_mcp/tools/scene_ops.py"
+      "source_file": "src\\blender_mcp\\tools\\scene_ops.py"
     },
     "set_active_camera": {
       "description": "Set the scene's active camera.",
@@ -2495,7 +3226,7 @@
       },
       "command_name": "set_active_camera",
       "module": "blender_mcp.tools.camera",
-      "source_file": "src/blender_mcp/tools/camera.py"
+      "source_file": "src\\blender_mcp\\tools\\camera.py"
     },
     "set_camera_depth_of_field": {
       "description": "Configure camera depth of field settings.",
@@ -2522,7 +3253,7 @@
       },
       "command_name": "set_camera_depth_of_field",
       "module": "blender_mcp.tools.camera",
-      "source_file": "src/blender_mcp/tools/camera.py"
+      "source_file": "src\\blender_mcp\\tools\\camera.py"
     },
     "set_keyframe": {
       "description": "Set a keyframe for animation.",
@@ -2551,7 +3282,49 @@
       },
       "command_name": "set_keyframe",
       "module": "blender_mcp.tools.animation",
-      "source_file": "src/blender_mcp/tools/animation.py"
+      "source_file": "src\\blender_mcp\\tools\\animation.py"
+    },
+    "set_project_color_pipeline": {
+      "description": "Set the color pipeline configuration for a project.",
+      "params": {
+        "project_code": {
+          "required": true,
+          "type": "str"
+        },
+        "working_colorspace": {
+          "required": false,
+          "type": "Optional[str]",
+          "default": "None"
+        },
+        "render_colorspace": {
+          "required": false,
+          "type": "Optional[str]",
+          "default": "None"
+        },
+        "display_colorspace": {
+          "required": false,
+          "type": "Optional[str]",
+          "default": "None"
+        },
+        "texture_colorspace": {
+          "required": false,
+          "type": "Optional[str]",
+          "default": "None"
+        },
+        "default_display": {
+          "required": false,
+          "type": "Optional[str]",
+          "default": "None"
+        },
+        "default_view": {
+          "required": false,
+          "type": "Optional[str]",
+          "default": "None"
+        }
+      },
+      "command_name": "set_project_color_pipeline",
+      "module": "blender_mcp.tools.color_tools",
+      "source_file": "src\\blender_mcp\\tools\\color_tools.py"
     },
     "set_texture": {
       "description": "Apply a PolyHaven texture to an object.",
@@ -2567,7 +3340,19 @@
       },
       "command_name": "set_texture",
       "module": "blender_mcp.tools.assets",
-      "source_file": "src/blender_mcp/tools/assets.py"
+      "source_file": "src\\blender_mcp\\tools\\assets.py"
+    },
+    "set_tracker_adapter_tool": {
+      "description": "Set the current tracker adapter.",
+      "params": {
+        "adapter_name": {
+          "required": true,
+          "type": "str"
+        }
+      },
+      "command_name": "set_tracker_adapter_tool",
+      "module": "blender_mcp.tools.tracker_tools",
+      "source_file": "src\\blender_mcp\\tools\\tracker_tools.py"
     },
     "set_transform": {
       "description": "Set the transform of an object.",
@@ -2599,7 +3384,27 @@
       },
       "command_name": "set_transform",
       "module": "blender_mcp.tools.scene_ops",
-      "source_file": "src/blender_mcp/tools/scene_ops.py"
+      "source_file": "src\\blender_mcp\\tools\\scene_ops.py"
+    },
+    "set_usd_variant_selection": {
+      "description": "Set the variant selection for a variant set.",
+      "params": {
+        "package_id": {
+          "required": true,
+          "type": "str"
+        },
+        "variant_set": {
+          "required": true,
+          "type": "str"
+        },
+        "variant_selection": {
+          "required": true,
+          "type": "str"
+        }
+      },
+      "command_name": "set_usd_variant_selection",
+      "module": "blender_mcp.tools.usd_tools",
+      "source_file": "src\\blender_mcp\\tools\\usd_tools.py"
     },
     "set_world_hdri": {
       "description": "Set the world HDRI environment.",
@@ -2616,7 +3421,7 @@
       },
       "command_name": "set_world_hdri",
       "module": "blender_mcp.tools.scene_ops",
-      "source_file": "src/blender_mcp/tools/scene_ops.py"
+      "source_file": "src\\blender_mcp\\tools\\scene_ops.py"
     },
     "setup_light_linking": {
       "description": "Setup light linking for selective illumination.",
@@ -2637,7 +3442,7 @@
       },
       "command_name": "setup_light_linking",
       "module": "blender_mcp.tools.lighting",
-      "source_file": "src/blender_mcp/tools/lighting.py"
+      "source_file": "src\\blender_mcp\\tools\\lighting.py"
     },
     "setup_render_passes": {
       "description": "Setup multiple render passes for compositing.",
@@ -2664,7 +3469,7 @@
       },
       "command_name": "setup_render_passes",
       "module": "blender_mcp.tools.export",
-      "source_file": "src/blender_mcp/tools/export.py"
+      "source_file": "src\\blender_mcp\\tools\\export.py"
     },
     "setup_render_settings": {
       "description": "Configure render settings for the active scene.",
@@ -2697,7 +3502,7 @@
       },
       "command_name": "setup_render_settings",
       "module": "blender_mcp.tools.composition",
-      "source_file": "src/blender_mcp/tools/composition.py"
+      "source_file": "src\\blender_mcp\\tools\\composition.py"
     },
     "setup_shot_camera": {
       "description": "Setup camera for a specific shot.",
@@ -2729,7 +3534,7 @@
       },
       "command_name": "setup_shot_camera",
       "module": "blender_mcp.tools.production",
-      "source_file": "src/blender_mcp/tools/production.py"
+      "source_file": "src\\blender_mcp\\tools\\production.py"
     },
     "setup_stereoscopic_render": {
       "description": "Setup stereoscopic rendering for VR/3D content.",
@@ -2752,7 +3557,69 @@
       },
       "command_name": "setup_stereoscopic_render",
       "module": "blender_mcp.tools.export",
-      "source_file": "src/blender_mcp/tools/export.py"
+      "source_file": "src\\blender_mcp\\tools\\export.py"
+    },
+    "sync_project_context": {
+      "description": "Sync project context with the tracker.",
+      "params": {
+        "project_code": {
+          "required": true,
+          "type": "str"
+        }
+      },
+      "command_name": "sync_project_context",
+      "module": "blender_mcp.tools.tracker_tools",
+      "source_file": "src\\blender_mcp\\tools\\tracker_tools.py"
+    },
+    "sync_shot_context": {
+      "description": "Sync shot context with the tracker.",
+      "params": {
+        "project_code": {
+          "required": true,
+          "type": "str"
+        },
+        "shot_name": {
+          "required": true,
+          "type": "str"
+        }
+      },
+      "command_name": "sync_shot_context",
+      "module": "blender_mcp.tools.tracker_tools",
+      "source_file": "src\\blender_mcp\\tools\\tracker_tools.py"
+    },
+    "tag_texture_colorspace": {
+      "description": "Determine the appropriate colorspace for a texture.",
+      "params": {
+        "texture_path": {
+          "required": true,
+          "type": "str"
+        },
+        "colorspace": {
+          "required": false,
+          "type": "Optional[str]",
+          "default": "None"
+        },
+        "project_code": {
+          "required": false,
+          "type": "Optional[str]",
+          "default": "None"
+        }
+      },
+      "command_name": "tag_texture_colorspace",
+      "module": "blender_mcp.tools.color_tools",
+      "source_file": "src\\blender_mcp\\tools\\color_tools.py"
+    },
+    "validate_color_pipeline": {
+      "description": "Validate the color pipeline configuration.",
+      "params": {
+        "project_code": {
+          "required": true,
+          "type": "str"
+        }
+      },
+      "command_name": "validate_color_pipeline",
+      "module": "blender_mcp.tools.color_tools",
+      "source_file": "src\\blender_mcp\\tools\\color_tools.py"
     }
   }
 }

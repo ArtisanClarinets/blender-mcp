@@ -23,4 +23,8 @@ __all__ = [
     "production",
     "ai_creative",
     "tripo3d",
+    "pipeline_tools",
+    "usd_tools",
+    "color_tools",
+    "tracker_tools",
 ]

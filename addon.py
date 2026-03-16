@@ -6,11 +6,13 @@ bl_info = {
     "name": "Blender MCP",
     "author": "BlenderMCP",
     "version": (1, 5, 5),
-    "blender": (3, 0, 0),
+    "blender": (3, 0, 0),  # Compatible with Blender 3.0+ including Blender 5
     "location": "View3D > Sidebar > BlenderMCP",
     "description": "Connect Blender to AI assistants via MCP with full API support",
     "category": "Interface",
     "support": "COMMUNITY",
+    "doc_url": "",
+    "tracker_url": "",
 }
 
 import bpy
@@ -546,12 +548,28 @@ def get_scene_info():
     except AttributeError:
         # In background thread, context may not have active_object
         pass
+    except Exception as e:
+        # Handle any other context access issues
+        print(f"[BlenderMCP] Warning: Could not get active object: {e}")
+
+    # Safely get scene info with error handling
+    try:
+        scene_name = bpy.context.scene.name
+        frame_start = bpy.context.scene.frame_start
+        frame_end = bpy.context.scene.frame_end
+        frame_current = bpy.context.scene.frame_current
+    except Exception as e:
+        print(f"[BlenderMCP] Warning: Could not access scene properties: {e}")
+        scene_name = "Scene"
+        frame_start = 1
+        frame_end = 250
+        frame_current = 1
 
     return {
-        "name": bpy.context.scene.name,
-        "frame_start": bpy.context.scene.frame_start,
-        "frame_end": bpy.context.scene.frame_end,
-        "frame_current": bpy.context.scene.frame_current,
+        "name": scene_name,
+        "frame_start": frame_start,
+        "frame_end": frame_end,
+        "frame_current": frame_current,
         "objects_count": len(bpy.data.objects),
         "objects": [get_object_info_with_uuid(obj) for obj in bpy.data.objects],
         "collections": [col.name for col in bpy.data.collections],
@@ -4033,98 +4051,7 @@ def _dispatch_sketchfab_command(command_type, params):
     raise ValueError(f"Unknown Sketchfab command type: {command_type}")
 
 
-class BlenderMCPServer:
-    """TCP socket server for Blender MCP."""
 
-    def __init__(self, host="localhost", port=9876):
-        self.host = host
-        self.port = port
-        self.running = False
-        self.socket = None
-        self.server_thread = None
-        self.idempotency_cache = {}
-
-    def start(self):
-        """Start the server."""
-        if self.running:
-            print("[BlenderMCP] Server is already running")
-            return
-
-        try:
-            self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            self.socket.bind((self.host, self.port))
-            self.socket.listen(1)
-            self.running = True
-
-            self.server_thread = threading.Thread(target=self._server_loop, daemon=True)
-            self.server_thread.start()
-
-            print(f"[BlenderMCP] Server started on {self.host}:{self.port}")
-        except Exception as e:
-            print(f"[BlenderMCP] Failed to start server: {e}")
-            self.running = False
-
-    def stop(self):
-        """Stop the server."""
-        self.running = False
-        if self.socket:
-            try:
-                self.socket.close()
-            except:
-                pass
-        if self.server_thread:
-            self.server_thread.join(timeout=2.0)
-        print("[BlenderMCP] Server stopped")
-
-    def _server_loop(self):
-        """Main server loop."""
-        while self.running:
-            try:
-                self.socket.settimeout(1.0)
-                client, address = self.socket.accept()
-                print(f"[BlenderMCP] Client connected from {address}")
-                self._handle_client(client)
-            except socket.timeout:
-                continue
-            except Exception as e:
-                if self.running:
-                    print(f"[BlenderMCP] Server error: {e}")
-
-    def _handle_client(self, client):
-        """Handle a client connection."""
-        buffer = b""
-
-        try:
-            while self.running:
-                data = client.recv(4096)
-                if not data:
-                    break
-
-                buffer += data
-
-                # Process complete messages (newline-delimited)
-                while b"\n" in buffer:
-                    line, buffer = buffer.split(b"\n", 1)
-
-                    command = parse_command(line)
-                    if not command:
-                        response = create_error_response(
-                            "invalid_command",
-                            "Could not parse command",
-                            request_id=None,
-                        )
-                    else:
-                        response = self._execute_command(command)
-
-                    response_bytes = encode_command(response)
-                    client.sendall(response_bytes)
-
-        except Exception as e:
-            print(f"[BlenderMCP] Client handler error: {e}")
-        finally:
-            client.close()
-            print("[BlenderMCP] Client disconnected")
 
     def _execute_command(self, command):
         """Execute a command and return response."""
@@ -4165,6 +4092,9 @@ class BlenderMCPServer:
             return {"hash": get_scene_hash()}
         elif command_type == "get_scene_info":
             return get_scene_info()
+        elif command_type == "ping":
+            # Simple connection test command
+            return {"status": "ok", "timestamp": datetime.now(timezone.utc).isoformat()}
         elif command_type == "get_object_info":
             return get_object_info(params)
         elif command_type == "get_viewport_screenshot":
@@ -4641,39 +4571,182 @@ class BlenderMCPSettings(PropertyGroup):
 # =============================================================================
 
 
-class BLENDERMCP_OT_start_server(Operator):
-    """Start the Blender MCP server."""
+# =============================================================================
+# SERVER MANAGER (SINGLETON, TIMER-BASED)
+# =============================================================================
 
-    bl_idname = "blendermcp.start_server"
-    bl_label = "Start Server"
-    bl_description = "Start the Blender MCP server"
+class BlenderMCPServerManager:
+    _instance = None
 
-    def execute(self, context):
-        global _server_instance
-        if _server_instance is None:
-            settings = context.scene.blendermcp_settings
-            _server_instance = BlenderMCPServer(
-                settings.server_host, settings.server_port
-            )
-        _server_instance.start()
-        self.report({"INFO"}, "Server started")
-        return {"FINISHED"}
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super(BlenderMCPServerManager, cls).__new__(cls)
+            cls._instance._initialized = False
+        return cls._instance
 
+    def __init__(self, host="127.0.0.1", port=9876):
+        if self._initialized:
+            return
+        self.host = host
+        self.port = port
+        self.server_socket = None
+        self.client_sockets = []
+        self.buffers = {}
+        self.idempotency_cache = {}
+        self._initialized = True
+        print("[BlenderMCP] Server Manager initialized")
 
-class BLENDERMCP_OT_stop_server(Operator):
-    """Stop the Blender MCP server."""
+    @property
+    def running(self):
+        return self.server_socket is not None and bpy.app.timers.is_registered(self._poll_server)
 
-    bl_idname = "blendermcp.stop_server"
-    bl_label = "Stop Server"
-    bl_description = "Stop the Blender MCP server"
+    def start(self):
+        if self.running:
+            print("[BlenderMCP] Server is already running.")
+            return True
+        try:
+            self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            self.server_socket.setblocking(False)
+            self.server_socket.bind((self.host, self.port))
+            self.server_socket.listen()
+            bpy.app.timers.register(self._poll_server, first_interval=0.01)
+            print(f"[BlenderMCP] Server started and listening on {self.host}:{self.port}")
+            return True
+        except Exception as e:
+            print(f"[BlenderMCP] Error starting server: {e}")
+            self.stop()
+            return False
 
-    def execute(self, context):
-        global _server_instance
-        if _server_instance:
-            _server_instance.stop()
-            _server_instance = None
-        self.report({"INFO"}, "Server stopped")
-        return {"FINISHED"}
+    def stop(self):
+        if bpy.app.timers.is_registered(self._poll_server):
+            bpy.app.timers.unregister(self._poll_server)
+        
+        for sock in self.client_sockets[:]:
+            try:
+                sock.close()
+            except Exception as e:
+                print(f"[BlenderMCP] Error closing client socket: {e}")
+        self.client_sockets.clear()
+        self.buffers.clear()
+
+        if self.server_socket:
+            try:
+                self.server_socket.close()
+            except Exception as e:
+                print(f"[BlenderMCP] Error closing server socket: {e}")
+            self.server_socket = None
+        print("[BlenderMCP] Server stopped.")
+
+    def _poll_server(self):
+        if not self.server_socket:
+            return 0.1
+
+        # Accept new connections
+        try:
+            conn, addr = self.server_socket.accept()
+            conn.setblocking(False)
+            self.client_sockets.append(conn)
+            self.buffers[conn] = b""
+            print(f"[BlenderMCP] Accepted connection from {addr}")
+        except BlockingIOError:
+            pass
+        except Exception as e:
+            print(f"[BlenderMCP] Error accepting connection: {e}")
+
+        # Handle existing clients
+        for sock in self.client_sockets[:]:
+            try:
+                self._handle_client(sock)
+            except Exception as e:
+                print(f"[BlenderMCP] Error handling client {sock.getpeername()}: {e}")
+                self._close_client_socket(sock)
+        
+        return 0.01
+
+    def _handle_client(self, sock):
+        try:
+            data = sock.recv(4096)
+            if not data:
+                print(f"[BlenderMCP] Client {sock.getpeername()} disconnected.")
+                self._close_client_socket(sock)
+                return
+            
+            buffer = self.buffers.get(sock, b"") + data
+            while b"\n" in buffer:
+                line, buffer = buffer.split(b"\n", 1)
+                self.buffers[sock] = buffer
+                if line:
+                    self._process_command(sock, line)
+
+            self.buffers[sock] = buffer
+
+        except BlockingIOError:
+            pass # No data to read
+        except ConnectionResetError:
+            print(f"[BlenderMCP] Client {sock.getpeername()} reset connection.")
+            self._close_client_socket(sock)
+
+    def _process_command(self, sock, line):
+        try:
+            command = parse_command(line)
+            if not command:
+                response = create_error_response("invalid_command", "Could not parse command")
+            else:
+                response = self._execute_command(command)
+            
+            response_bytes = encode_command(response)
+            sock.sendall(response_bytes)
+        except Exception as e:
+            print(f"[BlenderMCP] Error processing command: {e}")
+            error_response = create_error_response("command_error", str(e))
+            sock.sendall(encode_command(error_response))
+
+    def _close_client_socket(self, sock):
+        if sock in self.client_sockets:
+            self.client_sockets.remove(sock)
+        if sock in self.buffers:
+            del self.buffers[sock]
+        try:
+            sock.close()
+        except Exception as e:
+            print(f"[BlenderMCP] Error during client socket cleanup: {e}")
+
+    def has_active_connections(self):
+        return len(self.client_sockets) > 0
+
+    def _execute_command(self, command):
+        request_id = command.get("request_id")
+        command_type = command.get("type")
+        params = command.get("params", {})
+        idempotency_key = command.get("idempotency_key")
+
+        if idempotency_key and idempotency_key in self.idempotency_cache:
+            return self.idempotency_cache[idempotency_key]
+
+        try:
+            result = self._dispatch_command(command_type, params)
+            response = create_success_response(result, request_id=request_id)
+        except Exception as e:
+            traceback.print_exc()
+            response = create_error_response("execution_error", str(e), request_id=request_id)
+
+        if idempotency_key:
+            self.idempotency_cache[idempotency_key] = response
+            if len(self.idempotency_cache) > 100:
+                self.idempotency_cache.pop(next(iter(self.idempotency_cache)))
+
+        return response
+
+    def _dispatch_command(self, command_type, params):
+        handler = COMMAND_HANDLERS.get(command_type)
+        if handler:
+            return handler(params)
+        else:
+            raise ValueError(f"Unknown command type: {command_type}")
+
+_server_instance = BlenderMCPServerManager()
+
 
 
 class BLENDERMCP_OT_start_local_model(Operator):
@@ -4724,9 +4797,11 @@ class BLENDERMCP_PT_main_panel(Panel):
         settings = context.scene.blendermcp_settings
         prefs = context.preferences.addons[__name__].preferences
 
-        global _server_instance
-        if _server_instance and _server_instance.running:
-            layout.label(text="Status: Running", icon="CHECKMARK")
+        if _server_instance.running:
+            if _server_instance.has_active_connections():
+                layout.label(text="Status: Connected", icon="CHECKMARK")
+            else:
+                layout.label(text="Status: Running (no client)", icon="INFO")
             layout.operator("blendermcp.stop_server")
         else:
             layout.label(text="Status: Stopped", icon="X")
@@ -4739,6 +4814,36 @@ class BLENDERMCP_PT_main_panel(Panel):
         box.label(text="Server Settings:")
         box.prop(settings, "server_host")
         box.prop(settings, "server_port")
+
+# =============================================================================
+# OPERATORS
+# =============================================================================
+
+class BLENDERMCP_OT_start_server(Operator):
+    """Start the Blender MCP server."""
+    bl_idname = "blendermcp.start_server"
+    bl_label = "Start Server"
+
+    def execute(self, context):
+        settings = context.scene.blendermcp_settings
+        _server_instance.host = settings.server_host
+        _server_instance.port = settings.server_port
+        if _server_instance.start():
+            self.report({"INFO"}, f"Server started on {settings.server_host}:{settings.server_port}")
+        else:
+            self.report({"ERROR"}, "Server failed to start. Check console for details.")
+        return {"FINISHED"}
+
+class BLENDERMCP_OT_stop_server(Operator):
+    """Stop the Blender MCP server."""
+    bl_idname = "blendermcp.stop_server"
+    bl_label = "Stop Server"
+
+    def execute(self, context):
+        _server_instance.stop()
+        self.report({"INFO"}, "Server stopped.")
+        return {"FINISHED"}
+
 
         layout.separator()
 
@@ -4866,17 +4971,27 @@ def register():
 
 def unregister():
     """Unregister addon."""
-    global _server_instance
-    if _server_instance:
+    # Ensure the server is stopped cleanly when the addon is disabled
+    if _server_instance and _server_instance.running:
+        print("[BlenderMCP] Addon unregistering, stopping server...")
         _server_instance.stop()
-        _server_instance = None
 
     # Stop local model server if running
     LocalModelServerManager.stop_server()
 
-    del bpy.types.Scene.blendermcp_settings
     for cls in reversed(classes):
-        bpy.utils.unregister_class(cls)
+        try:
+            bpy.utils.unregister_class(cls)
+        except RuntimeError:
+            # This can happen during reloads, ignore
+            pass
+    
+    try:
+        del bpy.types.Scene.blendermcp_settings
+    except AttributeError:
+        pass
+    
+    print("[BlenderMCP] Addon unregistered successfully.")
 
 
 if __name__ == "__main__":
